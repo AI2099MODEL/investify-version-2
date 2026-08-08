@@ -2,6 +2,8 @@ package com.example
 
 import android.Manifest
 import java.util.Locale
+import java.util.Calendar
+import androidx.compose.foundation.border
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -373,6 +375,58 @@ fun WatchlistScreen(
                                     )
                                 }
 
+                                // Dividend alert banner
+                                val matchedDividend = MASTER_DIVIDEND_LIST.find {
+                                    it.symbol.equals(alert.ticker, ignoreCase = true) ||
+                                    it.symbol.replace(".NS", "").equals(alert.ticker.replace(".NS", ""), ignoreCase = true)
+                                }
+                                if (matchedDividend != null) {
+                                    val calTomorrow = Calendar.getInstance()
+                                    calTomorrow.add(Calendar.DAY_OF_YEAR, 1)
+                                    val tomorrowDateStr = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calTomorrow.time)
+
+                                    val isExDateTomorrow = matchedDividend.exDate == tomorrowDateStr
+                                    val isPayoutTomorrow = getPayoutDate(matchedDividend.exDate) == tomorrowDateStr
+
+                                    if (isExDateTomorrow) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(0xFFFFF0F1))
+                                                .border(0.5.dp, Color(0xFFFCA5A5), RoundedCornerShape(4.dp))
+                                                .padding(vertical = 4.dp, horizontal = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "🔔 EX-DIVIDEND TOMORROW\nAmount: ₹${matchedDividend.amountPerShare}",
+                                                fontSize = 8.5.sp,
+                                                lineHeight = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFDC2626)
+                                            )
+                                        }
+                                    }
+
+                                    if (isPayoutTomorrow) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(0xFFECFDF5))
+                                                .border(0.5.dp, Color(0xFF6EE7B7), RoundedCornerShape(4.dp))
+                                                .padding(vertical = 4.dp, horizontal = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "💰 PAYOUT TOMORROW\nAmount: ₹${matchedDividend.amountPerShare}",
+                                                fontSize = 8.5.sp,
+                                                lineHeight = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF059669)
+                                            )
+                                        }
+                                    }
+                                }
+
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
                                     color = if (isTargetReached) Color(0xFFECFDF5) else Color(0xFFF1F5F9),
@@ -382,25 +436,15 @@ fun WatchlistScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = if (isTargetReached) "Target Hit! 🎉" else if (alert.isAlertActive) "Alert Active" else "Paused",
-                                            fontSize = 8.5.sp,
+                                            text = if (isTargetReached) "Target Hit! 🎉" else "Alert Active",
+                                            fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isTargetReached) Color(0xFF047857) else Color(0xFF475569)
-                                        )
-
-                                        Switch(
-                                            checked = alert.isAlertActive,
-                                            onCheckedChange = { active ->
-                                                viewModel.updateAlertActiveStatus(alert, active)
-                                            },
-                                            modifier = Modifier
-                                                .height(18.dp)
-                                                .scale(0.60f)
+                                            color = if (isTargetReached) Color(0xFF047857) else Color(0xFF2563EB)
                                         )
                                     }
                                 }

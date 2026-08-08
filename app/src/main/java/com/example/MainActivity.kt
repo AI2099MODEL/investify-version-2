@@ -141,7 +141,7 @@ data class BreakoutAsset(
 
 
 enum class Screen {
-    HOME, LIVE, DIVIDENDS, WATCHLIST, NEWS, PREMIUM
+    HOME, AUTO_TRADER, LIVE, DIVIDENDS, WATCHLIST, NEWS, PREMIUM
 }
 
 @Composable
@@ -430,7 +430,7 @@ fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) 
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val navItems = listOf(
-                    Triple(Screen.HOME, Icons.Default.Home, "Home"),
+                    Triple(Screen.HOME, Icons.Default.Home, "Breakouts"),
                     Triple(Screen.DIVIDENDS, Icons.Default.CurrencyRupee, "Dividends"),
                     Triple(Screen.WATCHLIST, Icons.Default.Favorite, "Watchlist"),
                     Triple(Screen.NEWS, Icons.Default.Newspaper, "News"),
@@ -696,6 +696,7 @@ fun MainApp() {
                                 selectedSymbol = symbol
                                 currentScreen = Screen.LIVE
                             })
+                            Screen.AUTO_TRADER -> AutoTraderTabContent()
                             Screen.LIVE, Screen.PREMIUM -> LiveScreen(initialSymbol = selectedSymbol)
                             Screen.DIVIDENDS -> DividendsScreen(onSymbolSelected = { symbol ->
                                 selectedSymbol = symbol
@@ -1415,10 +1416,10 @@ fun ScanResult.toScannedBreakout() = ScannedBreakout(
     isBtst = isBtst
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) -> Unit = {}) {
     val coroutineScope = rememberCoroutineScope()
+    var activeSubTab by remember { mutableStateOf("BREAKOUTS") } // "BREAKOUTS" or "AUTOTRADER"
     var scanResults by remember { mutableStateOf<List<ScanResult>>(emptyList()) }
     var isScanning by remember { mutableStateOf(true) }
     var loadingPercent by remember { mutableIntStateOf(0) }
@@ -1445,37 +1446,47 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
         }
     }
 
-    // Initial Auto-scan for Top 15 Breakouts with Database Caching
+    // Load from cache first, then run a periodic background refresh to keep it fresh
     LaunchedEffect(Unit) {
+        // Load cached immediately to prevent empty/stale display
         try {
-            isScanning = true
             val cached = withContext(Dispatchers.IO) {
                 MyApplication.database.scannedBreakoutDao().getAllScannedBreakoutsList()
             }
             if (cached.isNotEmpty()) {
                 scanResults = cached.map { it.toScanResult() }
-                isScanning = false
-            } else {
-                val fresh = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
-                scanResults = fresh
-                lastFetchedTime = System.currentTimeMillis()
-                withContext(Dispatchers.IO) {
-                    MyApplication.database.scannedBreakoutDao().clearAll()
-                    MyApplication.database.scannedBreakoutDao().insertBreakouts(fresh.map { it.toScannedBreakout() })
-                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        } finally {
-            isScanning = false
+        }
+
+        while (isActive) {
+            try {
+                isScanning = true
+                val fresh = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
+                if (fresh.isNotEmpty()) {
+                    scanResults = fresh
+                    lastFetchedTime = System.currentTimeMillis()
+                    withContext(Dispatchers.IO) {
+                        MyApplication.database.scannedBreakoutDao().clearAll()
+                        MyApplication.database.scannedBreakoutDao().insertBreakouts(fresh.map { it.toScannedBreakout() })
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isScanning = false
+            }
+            // Refresh breakouts in background every 3 minutes
+            delay(180000)
         }
     }
 
-    // Live CMP Refresh for Top 15 Breakout Stocks
-    LaunchedEffect(scanResults.size) {
-        if (scanResults.isEmpty()) return@LaunchedEffect
+    // Live CMP Refresh for Top 15 Breakout Stocks (only when viewing breakouts tab)
+    LaunchedEffect(scanResults.size, activeSubTab) {
+        if (scanResults.isEmpty() || activeSubTab != "BREAKOUTS") return@LaunchedEffect
         while (isActive) {
-            delay(60000)
+            delay(30000) // Fast CMP updates: 30 seconds
             try {
                 val updatedList = withContext(Dispatchers.IO) {
                     scanResults.map { item ->
@@ -1512,101 +1523,205 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
             .fillMaxSize()
             .background(Color(0xFFF1F3F6))
     ) {
-        if (isScanning && scanResults.isEmpty()) {
-            Box(
+        // Submenu selector: Top Breakouts and Auto Trader side-by-side
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+        ) {
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(40.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(
-                            progress = { loadingPercent / 100f },
-                            color = TabActiveBlue,
-                            modifier = Modifier.size(56.dp),
-                            strokeWidth = 5.dp
-                        )
-                        Text(
-                            text = "$loadingPercent%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TabActiveBlue
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Scanning NIFTY 200 for breakout signals...", fontSize = 11.sp, color = TextMutedGray)
-                }
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = 8.dp, top = 8.dp, end = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                // Breakouts button
+                val isBreakoutsSelected = activeSubTab == "BREAKOUTS"
+                Surface(
+                    onClick = { activeSubTab = "BREAKOUTS" },
+                    modifier = Modifier.weight(1f),
+                    color = if (isBreakoutsSelected) TabActiveBlue else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Top Breakouts",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A),
-                            letterSpacing = (-0.3).sp
-                        )
-
-                        IconButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    try {
-                                        isScanning = true
-                                        val fresh = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
-                                        scanResults = fresh
-                                        lastFetchedTime = System.currentTimeMillis()
-                                        withContext(Dispatchers.IO) {
-                                            MyApplication.database.scannedBreakoutDao().clearAll()
-                                            MyApplication.database.scannedBreakoutDao().insertBreakouts(fresh.map { it.toScannedBreakout() })
-                                        }
-                                    } catch (e: Exception) {
-                                    } finally {
-                                        isScanning = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            if (isScanning) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Refresh Breakout Signals",
-                                    tint = Color(0xFF64748B),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.TrendingUp,
+                                contentDescription = null,
+                                tint = if (isBreakoutsSelected) Color.White else Color(0xFF64748B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Top Breakouts",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isBreakoutsSelected) Color.White else Color(0xFF64748B)
+                            )
                         }
                     }
                 }
 
-                items(scanResults, key = { it.ticker }) { res ->
-                    StockBreakoutCard(
-                        res = res,
-                        onSymbolSelected = onSymbolSelected
-                    )
+                // Auto Trader button
+                val isAutoTraderSelected = activeSubTab == "AUTOTRADER"
+                Surface(
+                    onClick = { activeSubTab = "AUTOTRADER" },
+                    modifier = Modifier.weight(1f),
+                    color = if (isAutoTraderSelected) TabActiveBlue else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.AutoGraph,
+                                contentDescription = null,
+                                tint = if (isAutoTraderSelected) Color.White else Color(0xFF64748B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Auto Trader",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAutoTraderSelected) Color.White else Color(0xFF64748B)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (activeSubTab == "AUTOTRADER") {
+            AutoTraderTabContent(modifier = Modifier.weight(1f))
+        } else {
+            if (isScanning && scanResults.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = { loadingPercent / 100f },
+                                color = TabActiveBlue,
+                                modifier = Modifier.size(56.dp),
+                                strokeWidth = 5.dp
+                            )
+                            Text(
+                                text = "$loadingPercent%",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TabActiveBlue
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Scanning NIFTY 200 for breakout signals...", fontSize = 11.sp, color = TextMutedGray)
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 8.dp, top = 4.dp, end = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Top Breakouts",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F172A),
+                                letterSpacing = (-0.3).sp
+                            )
+
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        try {
+                                            isScanning = true
+                                            val fresh = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
+                                            scanResults = fresh
+                                            lastFetchedTime = System.currentTimeMillis()
+                                            withContext(Dispatchers.IO) {
+                                                MyApplication.database.scannedBreakoutDao().clearAll()
+                                                MyApplication.database.scannedBreakoutDao().insertBreakouts(fresh.map { it.toScannedBreakout() })
+                                            }
+                                        } catch (e: Exception) {
+                                        } finally {
+                                            isScanning = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                if (isScanning) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Refresh Breakout Signals",
+                                        tint = Color(0xFF64748B),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    items(scanResults, key = { it.ticker }) { res ->
+                        StockBreakoutCard(
+                            res = res,
+                            onSymbolSelected = onSymbolSelected
+                        )
+                    }
+
+                    // SEBI Disclaimer card at the bottom of Home page
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 8.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "SEBI Disclaimer: I am not a SEBI registered analyst. All trade recommendations, automated/virtual trades, strategies, and content displayed here are strictly for educational and informational purposes only. Paper trading / virtual trading involves no real money, but actual trading involves market risks. Please consult a qualified financial advisor before making any investment decisions.",
+                                fontSize = 9.5.sp,
+                                color = Color(0xFF64748B),
+                                lineHeight = 13.sp,
+                                modifier = Modifier.padding(10.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
         }

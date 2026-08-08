@@ -28,15 +28,16 @@ class DividendWorker(
             if (dividend.exDate == tomorrowDateString) {
                 sendNotification(
                     dividend.hashCode(),
-                    "Upcoming Ex-Dividend Date",
+                    "Upcoming Ex-Dividend Tomorrow",
                     "${dividend.companyName} (${dividend.symbol}) goes ex-dividend tomorrow. Amount: ₹${dividend.amountPerShare}"
                 )
             }
-            if (dividend.recordDate == tomorrowDateString && dividend.exDate != dividend.recordDate) {
+            val payoutDateStr = getPayoutDate(dividend.exDate)
+            if (payoutDateStr == tomorrowDateString) {
                 sendNotification(
-                    dividend.hashCode() + 1,
-                    "Upcoming Record Date",
-                    "${dividend.companyName} (${dividend.symbol}) record date is tomorrow. Amount: ₹${dividend.amountPerShare}"
+                    dividend.hashCode() + 2,
+                    "Upcoming Dividend Payout Tomorrow",
+                    "${dividend.companyName} (${dividend.symbol}) dividend payout is tomorrow. Amount: ₹${dividend.amountPerShare}"
                 )
             }
         }

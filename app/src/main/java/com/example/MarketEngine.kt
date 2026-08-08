@@ -80,12 +80,38 @@ object MarketEngine {
         val timeInMinutes = hour * 60 + minute
 
         val isWeekday = dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY
-        val isMarketHours = isWeekday && (timeInMinutes in (9 * 60 + 15)..(15 * 60 + 30))
+        val isHoliday = MarketUtils.isMarketHoliday(cal)
+        val isMarketHours = isWeekday && !isHoliday && (timeInMinutes in 555..930) // 9:15 AM - 3:30 PM IST
 
-        val runCycle = isMarketHours || isSimulationMode.value
-
-        if (!runCycle) {
-            addLog("Market is Closed. Indian Market hours: Mon-Fri, 9:15 AM - 3:30 PM IST. Enable 'Simulation Mode' to test.")
+        if (!isMarketHours) {
+            addLog("Market is Closed. Auto Trader only runs during Market Hours (Mon-Fri, 9:15 AM - 3:30 PM IST, excluding holidays). Updating active trade prices to latest close...")
+            // Update prices of existing ACTIVE trades so they are up-to-date with latest market close!
+            val activeTrades = db.virtualTradeDao().getActiveTrades()
+            if (activeTrades.isNotEmpty()) {
+                activeTrades.map { trade ->
+                    async {
+                        try {
+                            val res = YahooRetrofit.service.getChart(trade.ticker, "1d", "1m")
+                            val chartResult = res.chart?.result?.firstOrNull()
+                            val currentPrice = chartResult?.meta?.regularMarketPrice ?: trade.currentPrice
+                            
+                            val newHighest = max(trade.highestPrice, currentPrice)
+                            val profitPct = ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
+                            val profitAmt = currentPrice - trade.entryPrice
+                            
+                            val updatedTrade = trade.copy(
+                                currentPrice = currentPrice,
+                                highestPrice = newHighest,
+                                profitPercent = profitPct,
+                                profitAmount = profitAmt
+                            )
+                            db.virtualTradeDao().updateTrade(updatedTrade)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }.awaitAll()
+            }
             return@withContext
         }
 
@@ -103,7 +129,7 @@ object MarketEngine {
                         
                         val newHighest = max(trade.highestPrice, currentPrice)
                         val profitPct = ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
-                        val profitAmt = VIRTUAL_ALLOCATION_PER_TRADE * (profitPct / 100.0)
+                        val profitAmt = currentPrice - trade.entryPrice // 1 Share calculation
                         
                         var updatedTrade = trade.copy(
                             currentPrice = currentPrice,
@@ -130,7 +156,7 @@ object MarketEngine {
 
                         if (targetReached) {
                             val finalProfitPct = ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
-                            val finalProfitAmt = VIRTUAL_ALLOCATION_PER_TRADE * (finalProfitPct / 100.0)
+                            val finalProfitAmt = currentPrice - trade.entryPrice // 1 Share calculation
                             updatedTrade = updatedTrade.copy(
                                 status = "PROFIT_BOOKED",
                                 exitPrice = currentPrice,
@@ -139,10 +165,10 @@ object MarketEngine {
                                 profitAmount = finalProfitAmt
                             )
                             db.virtualTradeDao().updateTrade(updatedTrade)
-                            addLog("🎉 BOOKED PROFIT (+2%) on ${trade.ticker} at ₹${String.format("%.2f", currentPrice)} (+${String.format("%.2f", finalProfitPct)}%)")
+                            addLog("🎉 BOOKED PROFIT (+2%) on ${trade.ticker} at ₹${String.format("%.2f", currentPrice)} (+${String.format("%.2f", finalProfitPct)}% for 1 Share)")
                         } else if (slHit) {
                             val finalProfitPct = ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
-                            val finalProfitAmt = VIRTUAL_ALLOCATION_PER_TRADE * (finalProfitPct / 100.0)
+                            val finalProfitAmt = currentPrice - trade.entryPrice // 1 Share calculation
                             updatedTrade = updatedTrade.copy(
                                 status = "STOP_LOSS",
                                 exitPrice = currentPrice,
@@ -151,7 +177,7 @@ object MarketEngine {
                                 profitAmount = finalProfitAmt
                             )
                             db.virtualTradeDao().updateTrade(updatedTrade)
-                            addLog("📉 STOP LOSS HIT on ${trade.ticker} at ₹${String.format("%.2f", currentPrice)} (${String.format("%.2f", finalProfitPct)}%)")
+                            addLog("📉 STOP LOSS HIT on ${trade.ticker} at ₹${String.format("%.2f", currentPrice)} (${String.format("%.2f", finalProfitPct)}% for 1 Share)")
                         } else {
                             db.virtualTradeDao().updateTrade(updatedTrade)
                         }
@@ -163,15 +189,14 @@ object MarketEngine {
         }
 
         // 2. Square-off check at 3:15 PM IST
-        // Or if in simulation mode, allow a manual square-off or trigger square-off when simulated close is hit
-        val isSquareOffTime = timeInMinutes in (15 * 60 + 15)..(15 * 60 + 30)
-        if (isSquareOffTime && isWeekday) {
+        val isSquareOffTime = (timeInMinutes in 915..930)
+        if (isSquareOffTime && isWeekday && !isHoliday) {
             val remaining = db.virtualTradeDao().getActiveTrades()
             if (remaining.isNotEmpty()) {
-                addLog("⏰ 3:15 PM Market Close: Squaring off all ${remaining.size} active trades...")
+                addLog("⏰ Auto Square-off Time Triggered: Squaring off all ${remaining.size} active trades...")
                 remaining.forEach { trade ->
                     val profitPct = ((trade.currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
-                    val profitAmt = VIRTUAL_ALLOCATION_PER_TRADE * (profitPct / 100.0)
+                    val profitAmt = trade.currentPrice - trade.entryPrice // 1 Share calculation
                     val squared = trade.copy(
                         status = "SQUARED_OFF",
                         exitPrice = trade.currentPrice,
@@ -180,7 +205,7 @@ object MarketEngine {
                         profitAmount = profitAmt
                     )
                     db.virtualTradeDao().updateTrade(squared)
-                    addLog("⏹️ Squared Off ${trade.ticker} at ₹${String.format("%.2f", trade.currentPrice)} (${String.format("%.2f", profitPct)}%)")
+                    addLog("⏹️ Squared Off ${trade.ticker} at ₹${String.format("%.2f", trade.currentPrice)} (${String.format("%.2f", profitPct)}% for 1 Share)")
                 }
                 
                 // Save profit log for today
@@ -211,6 +236,34 @@ object MarketEngine {
                 }.awaitAll()
 
                 breakoutCandidates.sortByDescending { it.score }
+
+                // Save breakout candidates to the database to keep the main list updated automatically!
+                if (breakoutCandidates.isNotEmpty()) {
+                    val dbBreakouts = breakoutCandidates.map { candidate ->
+                        ScannedBreakout(
+                            ticker = candidate.ticker,
+                            name = candidate.name,
+                            price = candidate.price,
+                            strategies = candidate.strategies,
+                            score = candidate.score,
+                            reasons = candidate.reasons,
+                            signalStrength = candidate.signalStrength,
+                            stopLoss = candidate.stopLoss,
+                            target1 = candidate.target1,
+                            target2 = candidate.target2,
+                            previousClose = candidate.previousClose,
+                            openPrice = candidate.openPrice,
+                            change = candidate.change,
+                            changePercent = candidate.changePercent,
+                            isBtst = candidate.isBtst,
+                            scannedAt = System.currentTimeMillis()
+                        )
+                    }
+                    db.scannedBreakoutDao().clearAll()
+                    db.scannedBreakoutDao().insertBreakouts(dbBreakouts)
+                    addLog("Background Scanner updated ${dbBreakouts.size} stocks in the Breakouts list.")
+                }
+
                 val toBuy = breakoutCandidates.take(emptySlots)
 
                 toBuy.forEach { candidate ->
@@ -278,7 +331,7 @@ object MarketEngine {
             addLog("Manual Overrule: Squaring off all active trades...")
             remaining.forEach { trade ->
                 val profitPct = ((trade.currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
-                val profitAmt = VIRTUAL_ALLOCATION_PER_TRADE * (profitPct / 100.0)
+                val profitAmt = trade.currentPrice - trade.entryPrice // 1 Share calculation
                 val squared = trade.copy(
                     status = "SQUARED_OFF",
                     exitPrice = trade.currentPrice,
@@ -287,7 +340,7 @@ object MarketEngine {
                     profitAmount = profitAmt
                 )
                 db.virtualTradeDao().updateTrade(squared)
-                addLog("⏹️ Manually Squared Off ${trade.ticker} at ₹${String.format("%.2f", trade.currentPrice)} (${String.format("%.2f", profitPct)}%)")
+                addLog("⏹️ Manually Squared Off ${trade.ticker} at ₹${String.format("%.2f", trade.currentPrice)} (${String.format("%.2f", profitPct)}% for 1 Share)")
             }
             logDailyProfit(db)
         }
@@ -297,7 +350,7 @@ object MarketEngine {
         val trade = db.virtualTradeDao().getAllTradesList().firstOrNull { it.id == tradeId }
         if (trade != null && trade.status == "ACTIVE") {
             val profitPct = ((trade.currentPrice - trade.entryPrice) / trade.entryPrice) * 100.0
-            val profitAmt = VIRTUAL_ALLOCATION_PER_TRADE * (profitPct / 100.0)
+            val profitAmt = trade.currentPrice - trade.entryPrice // 1 Share calculation
             val updated = trade.copy(
                 status = "SQUARED_OFF",
                 exitPrice = trade.currentPrice,
@@ -306,7 +359,7 @@ object MarketEngine {
                 profitAmount = profitAmt
             )
             db.virtualTradeDao().updateTrade(updated)
-            addLog("⏹️ Manually Squared Off ${trade.ticker} at ₹${String.format("%.2f", trade.currentPrice)} (${String.format("%.2f", profitPct)}%)")
+            addLog("⏹️ Manually Squared Off ${trade.ticker} at ₹${String.format("%.2f", trade.currentPrice)} (${String.format("%.2f", profitPct)}% for 1 Share)")
             logDailyProfit(db)
         }
     }

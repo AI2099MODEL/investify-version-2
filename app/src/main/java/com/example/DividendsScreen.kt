@@ -1,5 +1,16 @@
 package com.example
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -522,11 +533,38 @@ fun DividendsScreen(
     modifier: Modifier = Modifier,
     onSymbolSelected: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var dividendList by remember { mutableStateOf(generateUpcomingDividends()) }
     
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasNotificationPermission = isGranted
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (!hasNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val todayDateStr = remember {
         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     }
@@ -611,6 +649,93 @@ fun DividendsScreen(
 
         Spacer(modifier = Modifier.height(4.dp))
 
+        // Dividend Alerts Setup Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            colors = CardDefaults.cardColors(containerColor = if (hasNotificationPermission) Color(0xFFF0FDF4) else Color(0xFFFFFBEB)),
+            border = BorderStroke(1.dp, if (hasNotificationPermission) Color(0xFFBBF7D0) else Color(0xFFFDE68A)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = if (hasNotificationPermission) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
+                        contentDescription = null,
+                        tint = if (hasNotificationPermission) Color(0xFF16A34A) else Color(0xFFD97706),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = if (hasNotificationPermission) "Dividend Alerts: ACTIVE" else "Enable Dividend Alerts",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasNotificationPermission) Color(0xFF14532D) else Color(0xFF78350F)
+                    )
+                }
+                
+                Text(
+                    text = "Get automatically notified on your phone 1 day before any stock's EX-DATE and PAYOUT DATE.",
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = if (hasNotificationPermission) Color(0xFF166534) else Color(0xFF92400E)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!hasNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        Button(
+                            onClick = { permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("Prompt Permission", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                try {
+                                    val builder = NotificationCompat.Builder(context, "DIVIDEND_ALERTS")
+                                        .setSmallIcon(android.R.drawable.ic_dialog_info)
+                                        .setContentTitle("Test Dividend Alert")
+                                        .setContentText("TCS (TCS.NS) goes ex-dividend tomorrow. Payout in 15 days!")
+                                        .setStyle(NotificationCompat.BigTextStyle().bigText("TCS (TCS.NS) goes ex-dividend tomorrow. Payout in 15 days! Amount: ₹28.00 per share."))
+                                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                                        .setDefaults(NotificationCompat.DEFAULT_ALL)
+                                        .setAutoCancel(true)
+
+                                    with(NotificationManagerCompat.from(context)) {
+                                        notify(9998, builder.build())
+                                    }
+                                } catch (e: Exception) {
+                                    // Fallback or safety
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Test Dividend Alert", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
         if (validUpcomingDividends.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -651,6 +776,51 @@ fun DividendsScreen(
                 }
             }
         }
+    }
+}
+
+fun formatDividendDate(dateStr: String): String {
+    try {
+        val sdfInput = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val date = sdfInput.parse(dateStr) ?: return dateStr
+        val cal = Calendar.getInstance()
+        cal.time = date
+        
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        val suffix = when {
+            day in 11..13 -> "TH"
+            day % 10 == 1 -> "ST"
+            day % 10 == 2 -> "ND"
+            day % 10 == 3 -> "RD"
+            else -> "TH"
+        }
+        
+        val monthSdf = SimpleDateFormat("MMMM", Locale.US)
+        val monthName = monthSdf.format(date).uppercase(Locale.US) // e.g. "JULY"
+        val year = cal.get(Calendar.YEAR)
+        
+        val dayOfWeekSdf = SimpleDateFormat("EEEE", Locale.US)
+        val dayOfWeek = dayOfWeekSdf.format(date).uppercase(Locale.US) // e.g. "FRIDAY"
+        
+        return "$day$suffix $monthName $year AND $dayOfWeek"
+    } catch (e: Exception) {
+        return dateStr.uppercase(Locale.US)
+    }
+}
+
+fun getPayoutDate(exDateStr: String): String {
+    try {
+        val sdfInput = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val date = sdfInput.parse(exDateStr) ?: return exDateStr
+        val cal = Calendar.getInstance()
+        cal.time = date
+        cal.add(Calendar.DAY_OF_YEAR, 15) // Payout is typically ~15 days after ex-date
+        val year = cal.get(Calendar.YEAR)
+        val month = String.format(Locale.US, "%02d", cal.get(Calendar.MONTH) + 1)
+        val day = String.format(Locale.US, "%02d", cal.get(Calendar.DAY_OF_MONTH))
+        return "$year-$month-$day"
+    } catch (e: Exception) {
+        return exDateStr
     }
 }
 
@@ -708,7 +878,7 @@ fun DividendCard(
                 }
             }
 
-            // Row 2: Company Icon + Ticker Symbol + Yield Badge
+            // Row 2: Company Icon + Ticker Symbol (Left), and Yield (Right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -723,27 +893,20 @@ fun DividendCard(
 
                     Text(
                         text = displaySymbol,
-                        fontSize = 11.5.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                         color = Color(0xFF1E293B),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(Color(0xFFDCFCE7))
-                            .padding(horizontal = 3.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = "Yield ${String.format(Locale.US, "%.1f", item.yieldPercent)}%",
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF15803D)
-                        )
-                    }
                 }
+
+                Text(
+                    text = "Yield: ${String.format(Locale.US, "%.2f", item.yieldPercent)}%",
+                    fontSize = 10.5.sp,
+                    color = Color(0xFF64748B),
+                    fontWeight = FontWeight.Medium
+                )
             }
 
             // Row 3: Payout Box (left) + Current Price (right)
@@ -754,53 +917,96 @@ fun DividendCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(3.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(Color(0xFFF8F9FA))
-                        .padding(horizontal = 4.dp, vertical = 1.5.dp)
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Payout ",
+                            text = "Payout: ",
                             color = Color(0xFF64748B),
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Normal
                         )
                         Text(
                             text = "₹$formattedPayout",
-                            color = Color(0xFF1E293B),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold
+                            color = Color(0xFF1F2937),
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Black
                         )
                     }
                 }
 
                 Text(
                     text = formattedPrice,
-                    fontSize = 11.5.sp,
+                    fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF10B981),
                     maxLines = 1
                 )
             }
 
-            // Row 4: Ex-date Banner Box (bottom)
+            Spacer(modifier = Modifier.height(2.dp))
+            
+            // Ex-date Banner
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(4.dp))
                     .background(Color(0xFFFFF0F1))
-                    .padding(vertical = 3.5.dp),
-                contentAlignment = Alignment.Center
+                    .padding(vertical = 4.dp, horizontal = 8.dp)
             ) {
-                Text(
-                    text = "EX-DATE: ${item.exDate}",
-                    fontSize = 8.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFDC2626),
-                    textAlign = TextAlign.Center,
-                    letterSpacing = 0.2.sp,
-                    maxLines = 1
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "EX-DATE",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFDC2626),
+                        letterSpacing = 0.2.sp
+                    )
+                    Text(
+                        text = formatDividendDate(item.exDate),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFDC2626),
+                        textAlign = TextAlign.End
+                    )
+                }
+            }
+
+            // Payout Date Banner
+            val payoutDateStr = getPayoutDate(item.exDate)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFFECFDF5))
+                    .padding(vertical = 4.dp, horizontal = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "PAYOUT DATE",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF059669),
+                        letterSpacing = 0.2.sp
+                    )
+                    Text(
+                        text = formatDividendDate(payoutDateStr),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF059669),
+                        textAlign = TextAlign.End
+                    )
+                }
             }
         }
     }

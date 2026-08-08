@@ -61,6 +61,7 @@ interface YahooFinanceService {
 
 object YahooRetrofit {
     private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, okhttp3.Response>>()
+    private val concurrencySemaphore = java.util.concurrent.Semaphore(4) // Limit to max 4 concurrent requests to prevent rate limit spikes
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -81,11 +82,29 @@ object YahooRetrofit {
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
                     .header("Accept", "application/json")
                 
-                val response = chain.proceed(builder.build())
-                if (response.isSuccessful) {
-                    memoryCache[url] = Pair(System.currentTimeMillis(), response.newBuilder().body(response.peekBody(Long.MAX_VALUE)).build())
+                concurrencySemaphore.acquire()
+                try {
+                    var response = chain.proceed(builder.build())
+                    
+                    // Handle rate limits (429) or transient server errors (5xx) with exponential backoff
+                    var retries = 0
+                    val maxRetries = 3
+                    var delayMs = 1000L
+                    while ((response.code == 429 || response.code >= 500) && retries < maxRetries) {
+                        retries++
+                        response.close()
+                        Thread.sleep(delayMs)
+                        response = chain.proceed(builder.build())
+                        delayMs *= 2
+                    }
+                    
+                    if (response.isSuccessful) {
+                        memoryCache[url] = Pair(System.currentTimeMillis(), response.newBuilder().body(response.peekBody(Long.MAX_VALUE)).build())
+                    }
+                    response
+                } finally {
+                    concurrencySemaphore.release()
                 }
-                response
             }
             .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
