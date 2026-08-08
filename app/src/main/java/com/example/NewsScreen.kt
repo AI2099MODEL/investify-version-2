@@ -792,50 +792,51 @@ fun VideoCardRowItem(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Source Tag Pill on Top
-                    if (video.channel.equals("Dhan", ignoreCase = true)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF00B386)), // Dhan Green
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "ध",
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                    // Source Icon Only on Top (once only, no name)
+                    val s = video.channel.lowercase(Locale.ROOT)
+                    val domain = when {
+                        s.contains("dhan") -> "dhan.co"
+                        s.contains("groww") -> "groww.in"
+                        s.contains("zee") -> "zeebiz.com"
+                        s.contains("cnbc") -> "cnbctv18.com"
+                        s.contains("et now") || s.contains("swadesh") -> "economictimes.indiatimes.com"
+                        else -> "youtube.com"
+                    }
+                    val logoUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
+
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF1F5F9))
+                            .border(0.5.dp, Color(0xFFE2E8F0), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val context = LocalContext.current
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(logoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = video.channel,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape),
+                            error = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = video.channel.take(1).uppercase(Locale.ROOT),
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF64748B)
+                                    )
+                                }
                             }
-                            Text(
-                                text = "Dhan",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF00B386)
-                            )
-                        }
-                    } else {
-                        // Remove above CNBC AWAAZ heading, keep below one
-                        if (!video.tag.contains("CNBC", ignoreCase = true)) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = video.tagBgColor.copy(alpha = 0.15f),
-                                border = BorderStroke(0.5.dp, video.tagBgColor)
-                            ) {
-                                Text(
-                                    text = video.tag,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = video.tagBgColor,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
+                        )
                     }
 
                     // Headline Below: Bold Black, Max 2 Lines, Ellipsis if longer
@@ -847,16 +848,6 @@ fun VideoCardRowItem(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 17.sp
-                    )
-
-                    // Channel Name Below Headline: Blue Text
-                    Text(
-                        text = video.channel,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF2563EB),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
