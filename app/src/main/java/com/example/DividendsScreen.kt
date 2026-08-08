@@ -582,7 +582,7 @@ fun DividendsScreen(
         ) {
             Text(
                 text = "Upcoming Dividends",
-                fontSize = 22.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0F172A),
                 letterSpacing = (-0.3).sp

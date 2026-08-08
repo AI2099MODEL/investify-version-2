@@ -297,7 +297,7 @@ fun NewsScreen(modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         text = "Market News",
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isNewsSelected) Color(0xFF7C3AED) else Color(0xFF94A3B8),
                         letterSpacing = (-0.3).sp
@@ -314,7 +314,7 @@ fun NewsScreen(modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         text = "Videos",
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isVideosSelected) Color(0xFF7C3AED) else Color(0xFF94A3B8),
                         letterSpacing = (-0.3).sp

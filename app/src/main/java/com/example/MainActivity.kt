@@ -1505,7 +1505,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                     ) {
                         Text(
                             text = "Top Breakouts",
-                            fontSize = 22.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF0F172A),
                             letterSpacing = (-0.3).sp
@@ -1591,7 +1591,7 @@ fun RecommendationsScreen(modifier: Modifier = Modifier, onSymbolSelected: (Stri
     }
 
     Column(modifier = modifier.fillMaxSize().background(Color(0xFFF5F7FA))) {
-        Text("Algorithmic Tech-Tips", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(16.dp))
+        Text("Algorithmic Tech-Tips", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(16.dp))
         
         if (isLoading) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -1666,7 +1666,7 @@ fun ConfigScreen(modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Broker Configuration", fontSize = 24.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
+        Text("Broker Configuration", fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
         Text("Select and configure your broker API for live CMP and Indices.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         Spacer(modifier = Modifier.height(8.dp))

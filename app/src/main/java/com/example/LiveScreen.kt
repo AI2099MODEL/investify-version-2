@@ -388,7 +388,7 @@ fun LiveScreen(modifier: Modifier = Modifier, initialSymbol: String? = null) {
         // Header
         Text(
             text = "AI Premium Analysis",
-            fontSize = 22.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF0F172A),
             letterSpacing = (-0.3).sp,
