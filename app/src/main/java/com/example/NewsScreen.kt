@@ -817,9 +817,20 @@ fun VideoCardRowItem(
                 // Text Block to the LEFT of Thumbnail
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Source Icon Only on Top (once only, no name)
+                    // Headline Above: Bold Black, Max 2 Lines, Ellipsis if longer
+                    Text(
+                        text = video.title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF111827),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 17.sp
+                    )
+
+                    // Source Icon and Name Below the headline (slightly bigger)
                     val s = video.channel.lowercase(Locale.ROOT)
                     val domain = when {
                         s.contains("dhan") -> "dhan.co"
@@ -831,51 +842,52 @@ fun VideoCardRowItem(
                     }
                     val logoUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
 
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFF1F5F9))
-                            .border(0.5.dp, Color(0xFFE2E8F0), CircleShape),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val context = LocalContext.current
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(logoUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = video.channel,
-                            contentScale = ContentScale.Fit,
+                        Box(
                             modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape),
-                            error = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = video.channel.take(1).uppercase(Locale.ROOT),
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF64748B)
-                                    )
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFF1F5F9))
+                                .border(0.5.dp, Color(0xFFE2E8F0), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val context = LocalContext.current
+                            SubcomposeAsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(logoUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = video.channel,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape),
+                                error = {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = video.channel.take(1).uppercase(Locale.ROOT),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF64748B)
+                                        )
+                                    }
                                 }
-                            }
+                            )
+                        }
+
+                        Text(
+                            text = video.channel,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF475569)
                         )
                     }
-
-                    // Headline Below: Bold Black, Max 2 Lines, Ellipsis if longer
-                    Text(
-                        text = video.title,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF111827),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 17.sp
-                    )
                 }
 
                 // Right Thumbnail Container (110x70px)
