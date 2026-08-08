@@ -68,8 +68,20 @@ data class VideoItem(
     val timeAgo: String,
     val category: String,
     val isLive: Boolean = false,
-    val isAvailable: Boolean = true
+    val isAvailable: Boolean = true,
+    val pubDateMs: Long = 0L
 )
+
+fun parsePubDateToMillis(pubDateStr: String): Long {
+    if (pubDateStr.isBlank()) return 0L
+    return try {
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+        val date = sdf.parse(pubDateStr)
+        date?.time ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+}
 
 suspend fun fetchYouTubeChannelVideos(
     channelId: String,
@@ -108,6 +120,7 @@ suspend fun fetchYouTubeChannelVideos(
                     if (videoId.isNotBlank()) {
                         val pubDate = item.optString("pubDate", "")
                         val timeAgo = parsePubDateToTimeAgo(pubDate)
+                        val pubDateMs = parsePubDateToMillis(pubDate)
                         result.add(
                             VideoItem(
                                 id = "yt_${channelId}_$videoId",
@@ -118,7 +131,8 @@ suspend fun fetchYouTubeChannelVideos(
                                 videoId = videoId,
                                 directUrl = if (link.isNotBlank()) link else "https://www.youtube.com/watch?v=$videoId",
                                 timeAgo = timeAgo,
-                                category = channelName.uppercase()
+                                category = channelName.uppercase(),
+                                pubDateMs = pubDateMs
                             )
                         )
                     }
@@ -194,7 +208,7 @@ fun NewsScreen(modifier: Modifier = Modifier) {
                     val d4 = async { fetchYouTubeChannelVideos("UCQIycDaLsBpMKjOCeaKUYVg", "CNBC Awaaz", "CNBC AWAAZ", Color(0xFF0284C7)) }
                     val d5 = async { fetchYouTubeChannelVideos("UCD3CdwT8lTCe5ZGHbUBxmWA", "ET Now Swadesh", "ET NOW SWADESH", Color(0xFFD97706)) }
                     val all = listOf(d1.await(), d2.await(), d3.await(), d4.await(), d5.await()).flatten()
-                    all.distinctBy { it.videoId }
+                    all.distinctBy { it.videoId }.sortedByDescending { it.pubDateMs }
                 }
                 if (fetched.isNotEmpty()) {
                     videoList = fetched
@@ -779,18 +793,46 @@ fun VideoCardRowItem(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Source Tag Pill on Top
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = video.tagBgColor.copy(alpha = 0.15f),
-                        border = BorderStroke(0.5.dp, video.tagBgColor)
-                    ) {
-                        Text(
-                            text = video.tag,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = video.tagBgColor,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                    if (video.channel.equals("Dhan", ignoreCase = true)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF00B386)), // Dhan Green
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "ध",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "Dhan",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF00B386)
+                            )
+                        }
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = video.tagBgColor.copy(alpha = 0.15f),
+                            border = BorderStroke(0.5.dp, video.tagBgColor)
+                        ) {
+                            Text(
+                                text = video.tag,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = video.tagBgColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
 
                     // Headline Below: Bold Black, Max 2 Lines, Ellipsis if longer
