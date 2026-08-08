@@ -686,21 +686,14 @@ fun DividendCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFF10B981))
-                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = item.dividendType.ifBlank { "DIVIDEND" }.uppercase(),
-                        color = Color.White,
-                        fontSize = 7.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.2.sp,
-                        maxLines = 1
-                    )
-                }
+                Text(
+                    text = item.dividendType.ifBlank { "DIVIDEND" }.uppercase(),
+                    color = Color.Black,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.2.sp,
+                    maxLines = 1
+                )
 
                 IconButton(
                     onClick = { isFavorite = !isFavorite },
