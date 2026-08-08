@@ -24,6 +24,15 @@ data class NewsArticle(
     val imageUrl: String = ""
 )
 
+fun isGoogleNewsOrDefaultLogo(url: String): Boolean {
+    val lower = url.lowercase(Locale.ROOT)
+    return lower.contains("googleusercontent.com") ||
+           lower.contains("gstatic.com") ||
+           (lower.contains("google.com") && !lower.contains("favicons")) ||
+           lower.contains("favicon.ico") ||
+           (lower.contains("logo") && (lower.contains("google") || lower.contains("g-") || lower.contains("/g_")))
+}
+
 object NewsTickerService {
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -251,28 +260,28 @@ object NewsTickerService {
             val ogImageMatch = ogImageRegex.find(html)
             if (ogImageMatch != null) {
                 val candidate = ogImageMatch.groupValues[1].replace("&amp;", "&")
-                if (candidate.startsWith("http")) return candidate
+                if (candidate.startsWith("http") && !isGoogleNewsOrDefaultLogo(candidate)) return candidate
             }
 
             val ogImageRegexAlt = """<meta\s+[^>]*content=["']([^"']+)["']\s+[^>]*property=["']og:image["']""".toRegex(RegexOption.IGNORE_CASE)
             val ogImageMatchAlt = ogImageRegexAlt.find(html)
             if (ogImageMatchAlt != null) {
                 val candidate = ogImageMatchAlt.groupValues[1].replace("&amp;", "&")
-                if (candidate.startsWith("http")) return candidate
+                if (candidate.startsWith("http") && !isGoogleNewsOrDefaultLogo(candidate)) return candidate
             }
 
             val twitterImageRegex = """<meta\s+[^>]*name=["']twitter:image["']\s+[^>]*content=["']([^"']+)["']""".toRegex(RegexOption.IGNORE_CASE)
             val twitterImageMatch = twitterImageRegex.find(html)
             if (twitterImageMatch != null) {
                 val candidate = twitterImageMatch.groupValues[1].replace("&amp;", "&")
-                if (candidate.startsWith("http")) return candidate
+                if (candidate.startsWith("http") && !isGoogleNewsOrDefaultLogo(candidate)) return candidate
             }
 
             val thumbRegex = """<meta\s+[^>]*name=["']thumbnail["']\s+[^>]*content=["']([^"']+)["']""".toRegex(RegexOption.IGNORE_CASE)
             val thumbMatch = thumbRegex.find(html)
             if (thumbMatch != null) {
                 val candidate = thumbMatch.groupValues[1].replace("&amp;", "&")
-                if (candidate.startsWith("http")) return candidate
+                if (candidate.startsWith("http") && !isGoogleNewsOrDefaultLogo(candidate)) return candidate
             }
         } catch (e: Exception) {
             // Silently fall back
@@ -330,7 +339,7 @@ object NewsTickerService {
                     val mediaMatch = mediaRegex.find(itemXml) ?: mediaRegex.find(unescapedXml)
                     if (mediaMatch != null) {
                         val candidate = mediaMatch.groupValues[1].replace("&amp;", "&")
-                        if (candidate.startsWith("http")) {
+                        if (candidate.startsWith("http") && !isGoogleNewsOrDefaultLogo(candidate)) {
                             extractedImg = candidate
                         }
                     }
@@ -340,7 +349,7 @@ object NewsTickerService {
                         val imgMatch = imgRegex.find(itemXml) ?: imgRegex.find(unescapedXml)
                         if (imgMatch != null) {
                             val candidate = imgMatch.groupValues[1].replace("&amp;", "&")
-                            if (candidate.startsWith("http")) {
+                            if (candidate.startsWith("http") && !isGoogleNewsOrDefaultLogo(candidate)) {
                                 extractedImg = candidate
                             }
                         }
@@ -349,13 +358,13 @@ object NewsTickerService {
                     // Try fetching from the actual page if we still don't have an image
                     if (extractedImg.isBlank() && link.isNotBlank()) {
                         val fetchedUrl = fetchRealImageUrlFromPage(link.trim())
-                        if (!fetchedUrl.isNullOrBlank()) {
+                        if (!fetchedUrl.isNullOrBlank() && !isGoogleNewsOrDefaultLogo(fetchedUrl)) {
                             extractedImg = fetchedUrl
                         }
                     }
 
-                    if (extractedImg.isBlank()) {
-                        extractedImg = getCategoryImage(articleCat, headline)
+                    if (extractedImg.isNotBlank() && isGoogleNewsOrDefaultLogo(extractedImg)) {
+                        extractedImg = ""
                     }
 
                     NewsArticle(

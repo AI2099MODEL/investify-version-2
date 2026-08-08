@@ -626,76 +626,112 @@ fun NewsCardItem(
             }
 
             // Right Side Image Container with rounded corners & ticker overlay on image bottom-right
+            val hasRealImage = article.imageUrl.isNotBlank() && !isGoogleNewsOrDefaultLogo(article.imageUrl)
+
             Box(
                 modifier = Modifier
                     .size(width = 82.dp, height = 76.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF1F5F9))
+                    .background(Color(0xFFF8FAFC))
+                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                val imageModel = if (article.imageUrl.isNotBlank()) {
-                    article.imageUrl
-                } else {
-                    NewsTickerService.getCategoryImage(article.category, article.title)
-                }
-
-                SubcomposeAsyncImage(
-                    model = imageModel,
-                    contentDescription = article.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                    error = {
-                        SubcomposeAsyncImage(
-                            model = NewsTickerService.getCategoryImage(article.category, article.title),
-                            contentDescription = article.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                )
-
-                // Dark gradient overlay at bottom of thumbnail image
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                if (hasRealImage) {
+                    SubcomposeAsyncImage(
+                        model = article.imageUrl,
+                        contentDescription = article.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        error = {
+                            SubcomposeAsyncImage(
+                                model = getPublisherLogoUrl(article.source, article.url),
+                                contentDescription = article.source,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(36.dp)
                             )
-                        )
-                )
-
-                // News Channel Favicon Overlay inside top-left of thumbnail picture
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(4.dp)
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.9f))
-                        .border(0.5.dp, Color(0xFFE2E8F0), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                        }
+                    )
+                } else {
                     SubcomposeAsyncImage(
                         model = getPublisherLogoUrl(article.source, article.url),
                         contentDescription = article.source,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(36.dp),
+                        error = {
+                            SubcomposeAsyncImage(
+                                model = NewsTickerService.getCategoryImage(article.category, article.title),
+                                contentDescription = article.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     )
                 }
 
-                // White ticker badge tag overlay at bottom-right corner of thumbnail image (e.g. "NTSK", "Red TV")
-                Text(
-                    text = tickerTag,
-                    fontSize = 8.5.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 5.dp, bottom = 4.dp),
-                    maxLines = 1
-                )
+                if (hasRealImage) {
+                    // Dark gradient overlay at bottom of thumbnail image
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(30.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                                )
+                            )
+                    )
+
+                    // News Channel Favicon Overlay inside top-left of thumbnail picture
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(4.dp)
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.9f))
+                            .border(0.5.dp, Color(0xFFE2E8F0), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SubcomposeAsyncImage(
+                            model = getPublisherLogoUrl(article.source, article.url),
+                            contentDescription = article.source,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+
+                    // White ticker badge tag overlay at bottom-right corner of thumbnail image
+                    Text(
+                        text = tickerTag,
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 5.dp, bottom = 4.dp),
+                        maxLines = 1
+                    )
+                } else {
+                    // Minimalist pill for ticker tag on a clean light container
+                    Surface(
+                        color = Color(0xFFF1F5F9),
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(0.5.dp, Color(0xFFE2E8F0)),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 4.dp, bottom = 4.dp)
+                    ) {
+                        Text(
+                            text = tickerTag,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF475569),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                            maxLines = 1
+                        )
+                    }
+                }
             }
         }
     }
