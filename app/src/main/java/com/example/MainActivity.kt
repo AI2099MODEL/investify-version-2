@@ -275,6 +275,24 @@ fun GlobalTopBar(
         modifier = Modifier.fillMaxWidth()
     ) {
         val scrollState = rememberScrollState()
+
+        LaunchedEffect(Unit) {
+            while (true) {
+                val maxScroll = scrollState.maxValue
+                if (maxScroll > 0) {
+                    if (scrollState.value >= maxScroll) {
+                        scrollState.scrollTo(0)
+                    } else {
+                        scrollState.animateScrollTo(
+                            value = scrollState.value + 100,
+                            animationSpec = tween(durationMillis = 2200, easing = LinearEasing)
+                        )
+                    }
+                }
+                delay(120)
+            }
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -283,101 +301,105 @@ fun GlobalTopBar(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // GIFT NIFTY
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "GIFT NIFTY",
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = giftNiftyPrice,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF8FAFC),
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = giftNiftyChange,
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (giftNiftyIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
-                    maxLines = 1,
-                    softWrap = false
-                )
-            }
+            repeat(4) {
+                // GIFT NIFTY
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "GIFT NIFTY",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = giftNiftyPrice,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF8FAFC),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = giftNiftyChange,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (giftNiftyIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
 
-            Text("•", fontSize = 9.sp, color = Color(0xFF475569))
+                Text("•", fontSize = 9.sp, color = Color(0xFF475569))
 
-            // SENSEX
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "SENSEX",
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = sensexPrice,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF8FAFC),
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = sensexChange,
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (sensexIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
-                    maxLines = 1,
-                    softWrap = false
-                )
-            }
+                // SENSEX
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "SENSEX",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = sensexPrice,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF8FAFC),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = sensexChange,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (sensexIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
 
-            Text("•", fontSize = 9.sp, color = Color(0xFF475569))
+                Text("•", fontSize = 9.sp, color = Color(0xFF475569))
 
-            // NIFTY 50
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "NIFTY 50",
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = niftyPrice,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF8FAFC),
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = niftyChange,
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (niftyIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
-                    maxLines = 1,
-                    softWrap = false
-                )
+                // NIFTY 50
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "NIFTY 50",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = niftyPrice,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF8FAFC),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = niftyChange,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (niftyIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+
+                Text("•", fontSize = 9.sp, color = Color(0xFF475569))
             }
         }
     }
