@@ -271,29 +271,41 @@ fun NewsScreen(modifier: Modifier = Modifier) {
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Text(
-                    text = "Market News",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (activeTab == 0) Color(0xFF0F172A) else Color(0xFF94A3B8),
-                    letterSpacing = (-0.3).sp,
-                    modifier = Modifier.clickable {
-                        activeTab = 0
-                    }
-                )
+                val isNewsSelected = activeTab == 0
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isNewsSelected) Color(0xFFEDE9FE) else Color.Transparent)
+                        .clickable { activeTab = 0 }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Market News",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isNewsSelected) Color(0xFF7C3AED) else Color(0xFF94A3B8),
+                        letterSpacing = (-0.3).sp
+                    )
+                }
 
-                Text(
-                    text = "Videos",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (activeTab == 1) Color(0xFF0F172A) else Color(0xFF94A3B8),
-                    letterSpacing = (-0.3).sp,
-                    modifier = Modifier.clickable {
-                        activeTab = 1
-                    }
-                )
+                val isVideosSelected = activeTab == 1
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isVideosSelected) Color(0xFFEDE9FE) else Color.Transparent)
+                        .clickable { activeTab = 1 }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Videos",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isVideosSelected) Color(0xFF7C3AED) else Color(0xFF94A3B8),
+                        letterSpacing = (-0.3).sp
+                    )
+                }
             }
 
             IconButton(
