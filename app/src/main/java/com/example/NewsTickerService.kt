@@ -24,7 +24,8 @@ data class NewsArticle(
     val imageUrl: String = ""
 )
 
-fun isGoogleNewsOrDefaultLogo(url: String): Boolean {
+fun isGoogleNewsOrDefaultLogo(url: String?): Boolean {
+    if (url.isNullOrBlank()) return true
     val lower = url.lowercase(Locale.ROOT)
     return lower.contains("googleusercontent.com") ||
            lower.contains("gstatic.com") ||

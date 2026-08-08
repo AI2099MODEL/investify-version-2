@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.ui.theme.Manrope
@@ -628,6 +629,21 @@ fun NewsCardItem(
             // Right Side Image Container with rounded corners & ticker overlay on image bottom-right
             val hasRealImage = article.imageUrl.isNotBlank() && !isGoogleNewsOrDefaultLogo(article.imageUrl)
 
+            var imageLoadFailed by remember(article.id) { mutableStateOf(false) }
+            var logoLoadFailed by remember(article.id) { mutableStateOf(false) }
+
+            val imageModel = remember(article.imageUrl, hasRealImage, imageLoadFailed, logoLoadFailed) {
+                if (hasRealImage && !imageLoadFailed) {
+                    article.imageUrl
+                } else if (!logoLoadFailed) {
+                    getPublisherLogoUrl(article.source, article.url)
+                } else {
+                    NewsTickerService.getCategoryImage(article.category, article.title)
+                }
+            }
+
+            val isShowingLogo = !logoLoadFailed && (!hasRealImage || imageLoadFailed)
+
             Box(
                 modifier = Modifier
                     .size(width = 82.dp, height = 76.dp)
@@ -636,37 +652,19 @@ fun NewsCardItem(
                     .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                if (hasRealImage) {
-                    SubcomposeAsyncImage(
-                        model = article.imageUrl,
-                        contentDescription = article.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                        error = {
-                            SubcomposeAsyncImage(
-                                model = getPublisherLogoUrl(article.source, article.url),
-                                contentDescription = article.source,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(36.dp)
-                            )
+                SubcomposeAsyncImage(
+                    model = imageModel,
+                    contentDescription = article.title,
+                    contentScale = if (isShowingLogo) ContentScale.Fit else ContentScale.Crop,
+                    modifier = if (isShowingLogo) Modifier.size(36.dp) else Modifier.fillMaxSize(),
+                    onError = {
+                        if (hasRealImage && !imageLoadFailed) {
+                            imageLoadFailed = true
+                        } else {
+                            logoLoadFailed = true
                         }
-                    )
-                } else {
-                    SubcomposeAsyncImage(
-                        model = getPublisherLogoUrl(article.source, article.url),
-                        contentDescription = article.source,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(36.dp),
-                        error = {
-                            SubcomposeAsyncImage(
-                                model = NewsTickerService.getCategoryImage(article.category, article.title),
-                                contentDescription = article.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    )
-                }
+                    }
+                )
 
                 if (hasRealImage) {
                     // Dark gradient overlay at bottom of thumbnail image
