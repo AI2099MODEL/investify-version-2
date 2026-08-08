@@ -779,7 +779,7 @@ fun VideoCardRowItem(
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // Side-by-Side Row Layout: Text LEFT, Thumbnail RIGHT (as requested)
             Row(
@@ -820,18 +820,21 @@ fun VideoCardRowItem(
                             )
                         }
                     } else {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = video.tagBgColor.copy(alpha = 0.15f),
-                            border = BorderStroke(0.5.dp, video.tagBgColor)
-                        ) {
-                            Text(
-                                text = video.tag,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = video.tagBgColor,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                        // Remove above CNBC AWAAZ heading, keep below one
+                        if (!video.tag.contains("CNBC", ignoreCase = true)) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = video.tagBgColor.copy(alpha = 0.15f),
+                                border = BorderStroke(0.5.dp, video.tagBgColor)
+                            ) {
+                                Text(
+                                    text = video.tag,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = video.tagBgColor,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
 
