@@ -701,23 +701,23 @@ fun formatDividendDate(dateStr: String): String {
         
         val day = cal.get(Calendar.DAY_OF_MONTH)
         val suffix = when {
-            day in 11..13 -> "TH"
-            day % 10 == 1 -> "ST"
-            day % 10 == 2 -> "ND"
-            day % 10 == 3 -> "RD"
-            else -> "TH"
+            day in 11..13 -> "th"
+            day % 10 == 1 -> "st"
+            day % 10 == 2 -> "nd"
+            day % 10 == 3 -> "rd"
+            else -> "th"
         }
         
         val monthSdf = SimpleDateFormat("MMMM", Locale.US)
-        val monthName = monthSdf.format(date).uppercase(Locale.US) // e.g. "JULY"
+        val monthName = monthSdf.format(date) // e.g. "July"
         val year = cal.get(Calendar.YEAR)
         
         val dayOfWeekSdf = SimpleDateFormat("EEEE", Locale.US)
-        val dayOfWeek = dayOfWeekSdf.format(date).uppercase(Locale.US) // e.g. "FRIDAY"
+        val dayOfWeek = dayOfWeekSdf.format(date) // e.g. "Friday"
         
-        return "$day$suffix $monthName $year AND $dayOfWeek"
+        return "$dayOfWeek ${day}$suffix $monthName $year"
     } catch (e: Exception) {
-        return dateStr.uppercase(Locale.US)
+        return dateStr
     }
 }
 

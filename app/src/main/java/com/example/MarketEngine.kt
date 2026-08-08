@@ -84,7 +84,7 @@ object MarketEngine {
         val isMarketHours = isWeekday && !isHoliday && (timeInMinutes in 555..930) // 9:15 AM - 3:30 PM IST
 
         if (!isMarketHours) {
-            addLog("Market is Closed. Auto Trader only runs during Market Hours (Mon-Fri, 9:15 AM - 3:30 PM IST, excluding holidays). Updating active trade prices to latest close...")
+            addLog("Market is Closed. Auto Trader is active in the background and will automatically start next market opening day (Mon-Fri, 9:15 AM - 3:30 PM IST). Updating active trade prices to latest close...")
             // Update prices of existing ACTIVE trades so they are up-to-date with latest market close!
             val activeTrades = db.virtualTradeDao().getActiveTrades()
             if (activeTrades.isNotEmpty()) {

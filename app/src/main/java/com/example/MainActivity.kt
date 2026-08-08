@@ -697,7 +697,8 @@ fun MainApp() {
                                 currentScreen = Screen.LIVE
                             })
                             Screen.AUTO_TRADER -> AutoTraderTabContent()
-                            Screen.LIVE, Screen.PREMIUM -> LiveScreen(initialSymbol = selectedSymbol)
+                            Screen.LIVE -> LiveScreen(initialSymbol = selectedSymbol, forceMode = 1)
+                            Screen.PREMIUM -> LiveScreen(forceMode = 0)
                             Screen.DIVIDENDS -> DividendsScreen(onSymbolSelected = { symbol ->
                                 selectedSymbol = symbol
                                 currentScreen = Screen.LIVE
@@ -1523,7 +1524,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
             .fillMaxSize()
             .background(Color(0xFFF1F3F6))
     ) {
-        // Submenu selector: Top Breakouts and Auto Trader side-by-side
+        // Submenu selector: Top Breakouts, Auto Trader, and Single Stock AI side-by-side
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1555,12 +1556,12 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                                 imageVector = Icons.Default.TrendingUp,
                                 contentDescription = null,
                                 tint = if (isBreakoutsSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 "Top Breakouts",
-                                fontSize = 12.5.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isBreakoutsSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
                             )
@@ -1585,14 +1586,44 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                                 imageVector = Icons.Default.AutoGraph,
                                 contentDescription = null,
                                 tint = if (isAutoTraderSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 "Auto Trader",
-                                fontSize = 12.5.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isAutoTraderSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
+                            )
+                        }
+                    }
+                }
+
+                // Single Stock AI button
+                val isSingleStockSelected = activeSubTab == "SINGLE_STOCK"
+                Surface(
+                    onClick = { activeSubTab = "SINGLE_STOCK" },
+                    modifier = Modifier.weight(1f),
+                    color = if (isSingleStockSelected) Color(0xFFEDE9FE) else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ShowChart,
+                                contentDescription = null,
+                                tint = if (isSingleStockSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "Single Stock AI",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSingleStockSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
                             )
                         }
                     }
@@ -1602,6 +1633,8 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
 
         if (activeSubTab == "AUTOTRADER") {
             AutoTraderTabContent(modifier = Modifier.weight(1f))
+        } else if (activeSubTab == "SINGLE_STOCK") {
+            LiveScreen(modifier = Modifier.weight(1f), forceMode = 1)
         } else {
             if (isScanning && scanResults.isEmpty()) {
                 Box(

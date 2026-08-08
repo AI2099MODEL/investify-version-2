@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.room.Room
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MyApplication : Application() {
     companion object {
@@ -27,6 +30,16 @@ class MyApplication : Application() {
         WorkerUtils.scheduleDividendWorker(this)
         WorkerUtils.scheduleMarketScannerEngineWorker(this)
         MarketEngine.startEngine(this)
+        
+        // One-time clear of dummy virtual trades
+        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("dummy_trades_cleared", false)) {
+            CoroutineScope(Dispatchers.IO).launch {
+                database.virtualTradeDao().clearAllTrades()
+                database.profitLogDao().clearAllLogs()
+                prefs.edit().putBoolean("dummy_trades_cleared", true).apply()
+            }
+        }
     }
 
     private fun createNotificationChannel() {
