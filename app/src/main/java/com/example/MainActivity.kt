@@ -431,7 +431,7 @@ fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) 
             ) {
                 val navItems = listOf(
                     Triple(Screen.HOME, Icons.Default.Home, "Home"),
-                    Triple(Screen.DIVIDENDS, Icons.Default.Paid, "Dividends"),
+                    Triple(Screen.DIVIDENDS, Icons.Default.CurrencyRupee, "Dividends"),
                     Triple(Screen.WATCHLIST, Icons.Default.Favorite, "Watchlist"),
                     Triple(Screen.NEWS, Icons.Default.Newspaper, "News"),
                     Triple(Screen.PREMIUM, Icons.Default.CardMembership, "Premium")
