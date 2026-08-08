@@ -76,7 +76,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import java.util.Locale
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.ripple.rememberRipple
 import com.google.android.gms.ads.AdRequest
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.AdSize
@@ -324,67 +324,69 @@ val NavActiveBlue = Color(0xFFE91E63)
 @Composable
 fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) {
     val context = LocalContext.current
-    Surface(
-        color = TopNavLightBg,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
+    MaterialTheme(
+        colorScheme = MaterialTheme.colorScheme.copy(
+            primary = NavActiveBlue
+        )
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            color = TopNavLightBg,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
         ) {
-            val navItems = listOf(
-                Triple(Screen.HOME, Icons.Default.Home, "Home"),
-                Triple(Screen.DIVIDENDS, Icons.Default.Paid, "Dividends"),
-                Triple(Screen.WATCHLIST, Icons.Default.Favorite, "Watchlist"),
-                Triple(Screen.NEWS, Icons.Default.Newspaper, "News"),
-                Triple(Screen.PREMIUM, Icons.Default.CardMembership, "Premium")
-            )
-
-            navItems.forEach { (screen, icon, label) ->
-                val isSelected = currentScreen == screen
-                
-                val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.15f else 1.0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    label = "IconScale"
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val navItems = listOf(
+                    Triple(Screen.HOME, Icons.Default.Home, "Home"),
+                    Triple(Screen.DIVIDENDS, Icons.Default.Paid, "Dividends"),
+                    Triple(Screen.WATCHLIST, Icons.Default.Favorite, "Watchlist"),
+                    Triple(Screen.NEWS, Icons.Default.Newspaper, "News"),
+                    Triple(Screen.PREMIUM, Icons.Default.CardMembership, "Premium")
                 )
 
-                val pillWidth by animateDpAsState(
-                    targetValue = if (isSelected) 48.dp else 0.dp,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "PillWidth"
-                )
+                navItems.forEach { (screen, icon, label) ->
+                    val isSelected = currentScreen == screen
+                    
+                    val iconScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.15f else 1.0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "IconScale"
+                    )
 
-                val contentColor by animateColorAsState(
-                    targetValue = if (isSelected) NavActiveBlue else Color(0xFF1E293B).copy(alpha = 0.7f),
-                    label = "ContentColor"
-                )
+                    val pillWidth by animateDpAsState(
+                        targetValue = if (isSelected) 48.dp else 0.dp,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "PillWidth"
+                    )
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null 
-                        ) {
-                            if (currentScreen != screen) {
-                                InterstitialAdManager.showAd(context) {
-                                    onScreenSelected(screen)
+                    val contentColor by animateColorAsState(
+                        targetValue = if (isSelected) NavActiveBlue else Color(0xFF1E293B).copy(alpha = 0.7f),
+                        label = "ContentColor"
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable {
+                                if (currentScreen != screen) {
+                                    InterstitialAdManager.showAd(context) {
+                                        onScreenSelected(screen)
+                                    }
                                 }
-                            }
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
+                            },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
                     Box(
                         modifier = Modifier
                             .height(28.dp)
@@ -396,7 +398,7 @@ fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) 
                                 .height(28.dp)
                                 .width(pillWidth)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(NavActiveBlue.copy(alpha = 0.12f))
+                                .background(NavActiveBlue.copy(alpha = 0.24f))
                         )
                         
                         Icon(
@@ -422,6 +424,7 @@ fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) 
             }
         }
     }
+}
 }
 
 @Composable
