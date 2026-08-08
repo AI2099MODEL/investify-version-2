@@ -57,6 +57,7 @@ class PriceAlertWorker(
         Result.success()
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     private fun sendNotification(alert: PriceAlert, currentPrice: Double) {
         val context = applicationContext
         try {

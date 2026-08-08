@@ -45,6 +45,7 @@ class DividendWorker(
         Result.success()
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     private fun sendNotification(id: Int, title: String, message: String) {
         val context = applicationContext
         try {

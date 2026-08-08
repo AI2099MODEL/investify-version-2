@@ -902,6 +902,7 @@ private fun Modifier.scale(scale: Float): Modifier = this.then(
     Modifier.graphicsLayer(scaleX = scale, scaleY = scale)
 )
 
+@android.annotation.SuppressLint("MissingPermission")
 private fun sendTestNotification(context: Context) {
     try {
         val intent = Intent(context, MainActivity::class.java).apply {
