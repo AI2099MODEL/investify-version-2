@@ -19,6 +19,7 @@ data class ScanResult(
     val target2: Double?,
     val historicalPrices: List<Double> = emptyList(),
     val previousClose: Double? = null,
+    val openPrice: Double? = null,
     val change: Double = 0.0,
     val changePercent: Double = 0.0,
     val isBtst: Boolean = false
@@ -81,9 +82,10 @@ object StockScanner {
             val name = result.meta?.shortName ?: result.meta?.longName ?: ticker
             val price = result.meta?.regularMarketPrice ?: return@withContext null
             val previousClose = result.meta?.previousClose ?: price
+            val quote = result.indicators?.quote?.firstOrNull() ?: return@withContext null
+            val dayOpen = result.meta?.regularMarketDayOpen ?: quote.open?.filterNotNull()?.firstOrNull() ?: previousClose
             val change = price - previousClose
             val changePercent = if (previousClose > 0.0) (change / previousClose) * 100 else 0.0
-            val quote = result.indicators?.quote?.firstOrNull() ?: return@withContext null
             
             val closes = quote.close?.filterNotNull() ?: return@withContext null
             
@@ -168,6 +170,7 @@ object StockScanner {
                 target2 = targets["target_2"],
                 historicalPrices = closes,
                 previousClose = previousClose,
+                openPrice = dayOpen,
                 change = change,
                 changePercent = changePercent,
                 isBtst = isBtstCandidate

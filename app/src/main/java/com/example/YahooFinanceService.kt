@@ -29,6 +29,7 @@ data class ChartData(
 @JsonClass(generateAdapter = true)
 data class ChartMeta(
     val regularMarketPrice: Double?,
+    val regularMarketDayOpen: Double? = null,
     val symbol: String?,
     val previousClose: Double?,
     val shortName: String?,
@@ -42,6 +43,7 @@ data class ChartIndicators(
 
 @JsonClass(generateAdapter = true)
 data class ChartQuote(
+    val open: List<Double?>? = null,
     val close: List<Double?>?,
     val high: List<Double?>?,
     val low: List<Double?>?,

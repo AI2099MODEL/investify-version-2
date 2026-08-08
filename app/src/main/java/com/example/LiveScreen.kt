@@ -385,6 +385,18 @@ fun LiveScreen(modifier: Modifier = Modifier, initialSymbol: String? = null) {
             .background(MaterialTheme.colorScheme.background)
             .padding(14.dp)
     ) {
+        // Header
+        Text(
+            text = "AI Premium Analysis",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0F172A),
+            letterSpacing = (-0.3).sp,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
         // Analysis Mode Switcher Tabs (Portfolio Level vs Single Stock)
         Surface(
             modifier = Modifier

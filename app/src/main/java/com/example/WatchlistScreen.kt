@@ -17,6 +17,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -103,232 +108,144 @@ fun WatchlistScreen(
                 .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header Card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Watchlist & Alerts",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0F172A),
+                    letterSpacing = (-0.3).sp
+                )
+
+                Button(
+                    onClick = { showDialog = true },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add Stock Alert", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Stats Pills Row
+            val activeCount = alerts.count { it.isAlertActive }
+            val reachedCount = alerts.count { alert ->
+                val cmp = currentPrices[alert.ticker]
+                cmp != null && if (alert.priceTarget > 0) cmp >= alert.priceTarget else cmp <= alert.priceTarget
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.weight(1f)
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AnimatedHeaderIcon(
-                            icon = if (hasNotificationPermission) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
-                            backgroundColor = if (hasNotificationPermission) Color(0xFF10B981) else Color(0xFFF59E0B),
-                            shape = RoundedCornerShape(12.dp),
-                            useSurface = true
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = Color(0xFF2563EB),
+                            modifier = Modifier.size(16.dp)
                         )
-                        Column(modifier = Modifier.weight(1f)) {
-                            AnimatedHeadingText(
-                                text = "Watchlist & Price Alerts",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                text = "Real-time background price monitoring & instant push alerts",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Column {
+                            Text("Active Alerts", fontSize = 9.sp, color = Color(0xFF64748B))
+                            Text("$activeCount / ${alerts.size}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Notification Enable & Status Row
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFFFEF3C7),
-                            border = BorderStroke(1.dp, Color(0xFFF59E0B)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Enable notifications for price alerts",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF92400E),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Button(
-                                    onClick = { permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(30.dp)
-                                ) {
-                                    Text("Enable", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    // Stats Pills & Test Alert Button
-                    val activeCount = alerts.count { it.isAlertActive }
-                    val reachedCount = alerts.count { alert ->
-                        val cmp = currentPrices[alert.ticker]
-                        cmp != null && if (alert.priceTarget > 0) cmp >= alert.priceTarget else cmp <= alert.priceTarget
-                    }
-
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.weight(1f)
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.NotificationsActive,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Column {
-                                    Text("Active", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("$activeCount / ${alerts.size}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                }
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF10B981),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Column {
-                                    Text("Triggered", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("$reachedCount Reached", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                }
-                            }
-                        }
-
-                        // Test Notification & New Alert Buttons Column
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { sendTestNotification(context) },
-                                shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.height(30.dp)
-                            ) {
-                                Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(12.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Test Alert", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            Button(
-                                onClick = { showDialog = true },
-                                shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.height(30.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(12.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("New Alert", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Column {
+                            Text("Triggered", fontSize = 9.sp, color = Color(0xFF64748B))
+                            Text("$reachedCount Reached", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                         }
                     }
+                }
+
+                OutlinedButton(
+                    onClick = { sendTestNotification(context) },
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF2563EB))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Test Alert", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
                 }
             }
 
             if (alerts.isEmpty()) {
-                Box(
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .clickable { showDialog = true },
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFCBD5E1))
                 ) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(28.dp)
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(64.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.NotificationsActive,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = "No Price Alerts Configured",
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-
-                            Text(
-                                text = "Track your favorite Indian stocks and receive automated push alerts when target levels are reached.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 6.dp),
-                                lineHeight = 16.sp
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            Button(
-                                onClick = { showDialog = true },
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Add Stock Alert", fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color(0xFF2563EB),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Tap to add your first stock to Watchlist",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2563EB)
+                        )
                     }
                 }
             } else {
-                LazyColumn(
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 80.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp)
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(alerts) { alert ->
                         val cmp = currentPrices[alert.ticker]
@@ -339,167 +256,152 @@ fun WatchlistScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp)
                                 .clickable { onSymbolSelected(alert.ticker) },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
                             border = BorderStroke(
                                 1.dp,
-                                if (isTargetReached) Color(0xFF10B981) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                if (isTargetReached) Color(0xFF10B981) else Color(0xFFE2E8F0)
                             )
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(IntrinsicSize.Min)
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                // Status Stripe on Left
-                                Box(
-                                    modifier = Modifier
-                                        .width(6.dp)
-                                        .fillMaxHeight()
-                                        .background(
-                                            when {
-                                                !alert.isAlertActive -> Color.Gray
-                                                isTargetReached -> Color(0xFF10B981)
-                                                else -> MaterialTheme.colorScheme.primary
-                                            }
-                                        )
-                                )
-
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(14.dp)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                    val badgeBg = when {
+                                        !alert.isAlertActive -> Color(0xFF94A3B8)
+                                        isTargetReached -> Color(0xFF10B981)
+                                        else -> Color(0xFF2563EB)
+                                    }
+                                    val badgeText = when {
+                                        !alert.isAlertActive -> "INACTIVE"
+                                        isTargetReached -> "TARGET HIT"
+                                        else -> "ACTIVE ALERT"
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(badgeBg)
+                                            .padding(horizontal = 5.dp, vertical = 2.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = alert.ticker.replace(".NS", ""),
-                                                fontWeight = FontWeight.Black,
-                                                fontSize = 15.sp,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 1,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                            )
+                                        Text(
+                                            text = badgeText,
+                                            color = Color.White,
+                                            fontSize = 7.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.2.sp,
+                                            maxLines = 1
+                                        )
+                                    }
 
-                                            if (isTargetReached) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = Color(0xFF10B981).copy(alpha = 0.15f)
-                                                ) {
-                                                    Text(
-                                                        text = "TARGET HIT",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        color = Color(0xFF10B981),
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            } else if (!alert.isAlertActive) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = Color.Gray.copy(alpha = 0.15f)
-                                                ) {
-                                                    Text(
-                                                        text = "INACTIVE",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color.Gray,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
+                                    IconButton(
+                                        onClick = { viewModel.deleteAlert(alert.id) },
+                                        modifier = Modifier.size(18.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Remove",
+                                            tint = Color(0xFFEF4444),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
 
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    CompanyLogoView(symbol = alert.ticker, modifier = Modifier.size(18.dp))
+
+                                    val displaySymbol = alert.ticker.replace(".NS", "").replace(".BO", "")
+                                    Text(
+                                        text = displaySymbol,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFF0F172A),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(Color(0xFFF8F9FA))
+                                            .padding(horizontal = 4.dp, vertical = 1.5.dp)
+                                    ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Switch(
-                                                checked = alert.isAlertActive,
-                                                onCheckedChange = { active ->
-                                                    viewModel.updateAlertActiveStatus(alert, active)
-                                                },
-                                                modifier = Modifier.scale(0.80f)
+                                            Text(
+                                                text = "Target ",
+                                                color = Color(0xFF64748B),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Normal
                                             )
-                                            IconButton(
-                                                onClick = { viewModel.deleteAlert(alert.id) },
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete Alert",
-                                                    tint = Color(0xFFEF4444).copy(alpha = 0.8f),
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
+                                            Text(
+                                                text = "₹${String.format(Locale.US, "%.1f", alert.priceTarget)}",
+                                                color = Color(0xFF0F172A),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
                                         }
                                     }
 
-                                    Spacer(modifier = Modifier.height(12.dp))
+                                    val cmpText = if (cmp != null) "₹${String.format(Locale.US, "%.1f", cmp)}" else "--"
+                                    val cmpColor = if (isTargetReached) Color(0xFF10B981) else Color(0xFF0F172A)
 
+                                    Text(
+                                        text = cmpText,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = cmpColor,
+                                        maxLines = 1
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = if (isTargetReached) Color(0xFFECFDF5) else Color(0xFFF1F5F9),
+                                    border = BorderStroke(0.5.dp, if (isTargetReached) Color(0xFFA7F3D0) else Color(0xFFE2E8F0)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Column(modifier = Modifier.padding(10.dp)) {
-                                                Text(
-                                                    text = "TARGET PRICE",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = "₹${"%.2f".format(alert.priceTarget)}",
-                                                    fontSize = 16.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
+                                        Text(
+                                            text = if (isTargetReached) "Target Hit! 🎉" else if (alert.isAlertActive) "Alert Active" else "Paused",
+                                            fontSize = 8.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isTargetReached) Color(0xFF047857) else Color(0xFF475569)
+                                        )
 
-                                        Surface(
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.End) {
-                                                Text(
-                                                    text = "CURRENT PRICE",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                if (cmp != null) {
-                                                    Text(
-                                                        text = "₹${"%.2f".format(cmp)}",
-                                                        fontSize = 16.sp,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        color = if (isTargetReached) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = "Loading...",
-                                                        fontSize = 14.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        Switch(
+                                            checked = alert.isAlertActive,
+                                            onCheckedChange = { active ->
+                                                viewModel.updateAlertActiveStatus(alert, active)
+                                            },
+                                            modifier = Modifier
+                                                .height(18.dp)
+                                                .scale(0.60f)
+                                        )
                                     }
                                 }
                             }
@@ -507,25 +409,23 @@ fun WatchlistScreen(
                     }
                 }
             }
-        }
 
-
-    }
-
-    if (showDialog) {
-        AddPriceAlertAiDialog(
-            hasNotificationPermission = hasNotificationPermission,
-            onRequestNotificationPermission = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            },
-            onDismiss = { showDialog = false },
-            onAddAlert = { formattedTicker, targetPrice ->
-                viewModel.addAlert(formattedTicker, targetPrice)
-                showDialog = false
+            if (showDialog) {
+                AddPriceAlertAiDialog(
+                    hasNotificationPermission = hasNotificationPermission,
+                    onRequestNotificationPermission = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
+                    onDismiss = { showDialog = false },
+                    onAddAlert = { formattedTicker, targetPrice ->
+                        viewModel.addAlert(formattedTicker, targetPrice)
+                        showDialog = false
+                    }
+                )
             }
-        )
+        }
     }
 }
 

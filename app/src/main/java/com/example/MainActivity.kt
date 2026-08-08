@@ -1,4 +1,20 @@
 package com.example
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+
+
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.text.style.TextOverflow
+
 import kotlinx.coroutines.*
 
 import android.content.Intent
@@ -7,6 +23,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -41,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.*
 import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -76,8 +100,48 @@ import android.view.Gravity
 import android.graphics.Typeface
 import android.graphics.Color as AndroidColor
 
+
+@Composable
+fun MiniSparkline(
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFF16A34A)
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(0f, h * 0.75f)
+            lineTo(w * 0.25f, h * 0.45f)
+            lineTo(w * 0.5f, h * 0.65f)
+            lineTo(w * 0.75f, h * 0.25f)
+            lineTo(w, h * 0.05f)
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        drawCircle(
+            color = color,
+            radius = 2.5.dp.toPx(),
+            center = Offset(w, h * 0.05f)
+        )
+    }
+}
+
+
+
+data class BreakoutAsset(
+    val name: String,
+    val trendPercentage: String,
+    val targetValue: String,
+    val currentPrice: String,
+    val stopLossPercentage: String
+)
+
+
 enum class Screen {
-    HOME, LIVE, DIVIDENDS, WATCHLIST, MARKET, NEWS
+    HOME, LIVE, DIVIDENDS, WATCHLIST, NEWS, PREMIUM
 }
 
 @Composable
@@ -103,9 +167,9 @@ fun TopScrollingTickerBanner() {
     }
 
     Surface(
-        color = if (!isDark) Color(0xFFF1F5F9) else Color(0xFF090D16),
+        color = Color(0xFFF1F5F9),
         modifier = Modifier.fillMaxWidth().height(30.dp),
-        border = BorderStroke(1.dp, if (!isDark) Color(0xFFCBD5E1) else Color(0xFF1E293B))
+        border = BorderStroke(1.dp, Color(0xFFCBD5E1))
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -164,9 +228,9 @@ fun TickerItem(tag: String, text: String, isUp: Boolean?) {
     ) {
         Surface(
             color = when (isUp) {
-                true -> if (!isDark) Color(0xFFD1FAE5) else Color(0xFF10B981).copy(alpha = 0.2f)
-                false -> if (!isDark) Color(0xFFFEE2E2) else Color(0xFFEF4444).copy(alpha = 0.2f)
-                else -> if (!isDark) Color(0xFFE2E8F0) else MaterialTheme.colorScheme.secondaryContainer
+                true -> Color(0xFFD1FAE5)
+                false -> Color(0xFFFEE2E2)
+                else -> Color(0xFFE2E8F0)
             },
             shape = RoundedCornerShape(4.dp)
         ) {
@@ -177,7 +241,7 @@ fun TickerItem(tag: String, text: String, isUp: Boolean?) {
                 color = when (isUp) {
                     true -> Color(0xFF047857)
                     false -> Color(0xFFB91C1C)
-                    else -> if (!isDark) Color(0xFF334155) else MaterialTheme.colorScheme.onSecondaryContainer
+                    else -> Color(0xFF334155)
                 },
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
             )
@@ -186,7 +250,7 @@ fun TickerItem(tag: String, text: String, isUp: Boolean?) {
             text = text,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color = if (!isDark) Color(0xFF0F172A) else Color(0xFFF8FAFC),
+            color = Color(0xFF0F172A),
             maxLines = 1
         )
     }
@@ -207,94 +271,162 @@ fun GlobalTopBar(
     giftNiftyIsPositive: Boolean
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        color = Color(0xFF0F172A),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Row 1: App Branding & Theme Toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // GIFT NIFTY
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF0F172A),
-                        border = BorderStroke(1.dp, Color(0xFF334155))
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_launcher_foreground),
-                            contentDescription = "StockBreak App Icon",
-                            modifier = Modifier.size(28.dp).padding(2.dp)
-                        )
-                    }
-                    AnimatedHeadingText("StockBreak", fontSize = 16.sp, fontWeight = FontWeight.Black)
-                }
-                val themeMode = LocalThemeMode.current
-                IconButton(onClick = { themeMode.value = !themeMode.value }, modifier = Modifier.size(30.dp)) {
-                    Icon(
-                        imageVector = if (themeMode.value) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = "Toggle Theme",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                Text("GIFT NIFTY", fontSize = 9.5.sp, fontWeight = FontWeight.Black, color = Color.White)
+                Text(giftNiftyPrice, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF8FAFC))
+                Text(giftNiftyChange, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = if (giftNiftyIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444))
             }
 
-            // Row 2: NIFTY, GIFT NIFTY & SENSEX figures all in one single horizontal line
-            val isDark = LocalThemeMode.current.value
-            Surface(
-                color = if (!isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A).copy(alpha = 0.6f),
-                modifier = Modifier.fillMaxWidth()
+            Text("•", fontSize = 9.sp, color = Color(0xFF475569))
+
+            // SENSEX
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
+                Text("SENSEX", fontSize = 9.5.sp, fontWeight = FontWeight.Black, color = Color.White)
+                Text(sensexPrice, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF8FAFC))
+                Text(sensexChange, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = if (sensexIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444))
+            }
+
+            Text("•", fontSize = 9.sp, color = Color(0xFF475569))
+
+            // NIFTY 50
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("NIFTY 50", fontSize = 9.5.sp, fontWeight = FontWeight.Black, color = Color.White)
+                Text(niftyPrice, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF8FAFC))
+                Text(niftyChange, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = if (niftyIsPositive) Color(0xFF22C55E) else Color(0xFFEF4444))
+            }
+        }
+    }
+}
+
+val TopNavLightBg = Color(0xFFF1F5F9)
+val NavActiveBlue = Color(0xFF2563EB)
+
+@Composable
+fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) {
+    val context = LocalContext.current
+    Surface(
+        color = TopNavLightBg,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val navItems = listOf(
+                Triple(Screen.HOME, Icons.Default.Home, "Home"),
+                Triple(Screen.DIVIDENDS, Icons.Default.Paid, "Dividends"),
+                Triple(Screen.WATCHLIST, Icons.Default.Favorite, "Watchlist"),
+                Triple(Screen.NEWS, Icons.Default.Newspaper, "News"),
+                Triple(Screen.PREMIUM, Icons.Default.CardMembership, "Premium")
+            )
+
+            navItems.forEach { (screen, icon, label) ->
+                val isSelected = currentScreen == screen
+                
+                val iconScale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.15f else 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "IconScale"
+                )
+
+                val pillWidth by animateDpAsState(
+                    targetValue = if (isSelected) 48.dp else 0.dp,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "PillWidth"
+                )
+
+                val contentColor by animateColorAsState(
+                    targetValue = if (isSelected) NavActiveBlue else TextMutedGray.copy(alpha = 0.8f),
+                    label = "ContentColor"
+                )
+
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null 
+                        ) {
+                            if (currentScreen != screen) {
+                                InterstitialAdManager.showAd(context) {
+                                    onScreenSelected(screen)
+                                }
+                            }
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    // NIFTY 50
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    Box(
+                        modifier = Modifier
+                            .height(28.dp)
+                            .width(56.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("NIFTY", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(niftyPrice, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
-                        Text(niftyChange, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (niftyIsPositive) Color(0xFF10B981) else Color(0xFFEF4444))
+                        Box(
+                            modifier = Modifier
+                                .height(28.dp)
+                                .width(pillWidth)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(NavActiveBlue.copy(alpha = 0.12f))
+                        )
+                        
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
+                            tint = contentColor,
+                            modifier = Modifier
+                                .size(22.dp)
+                                .scale(iconScale)
+                        )
                     }
-
-                    Text("•", fontSize = 8.sp, color = MaterialTheme.colorScheme.outlineVariant)
-
-                    // GIFT NIFTY
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text("GIFT NIFTY", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(giftNiftyPrice, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
-                        Text(giftNiftyChange, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (giftNiftyIsPositive) Color(0xFF10B981) else Color(0xFFEF4444))
-                    }
-
-                    Text("•", fontSize = 8.sp, color = MaterialTheme.colorScheme.outlineVariant)
-
-                    // SENSEX
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text("SENSEX", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(sensexPrice, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
-                        Text(sensexChange, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (sensexIsPositive) Color(0xFF10B981) else Color(0xFFEF4444))
-                    }
+                    
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    Text(
+                        text = label,
+                        fontSize = 10.5.sp,
+                        color = contentColor,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        letterSpacing = 0.1.sp
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+fun AppBottomNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) {
+    AppTopNavigation(currentScreen = currentScreen, onScreenSelected = onScreenSelected)
 }
 
 @Composable
@@ -407,46 +539,89 @@ fun MainApp() {
         }
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            Column(modifier = Modifier.statusBarsPadding()) {
-                GlobalTopBar(
-                    niftyPrice = niftyPrice,
-                    niftyChange = niftyChange,
-                    niftyIsPositive = niftyIsPositive,
-                    sensexPrice = sensexPrice,
-                    sensexChange = sensexChange,
-                    sensexIsPositive = sensexIsPositive,
-                    giftNiftyPrice = giftNiftyPrice,
-                    giftNiftyChange = giftNiftyChange,
-                    giftNiftyIsPositive = giftNiftyIsPositive
-                )
+    Surface(
+        color = Color(0xFF0F172A),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            containerColor = Color(0xFF0F172A),
+            contentWindowInsets = WindowInsets(0.dp),
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    GlobalTopBar(
+                        niftyPrice = niftyPrice,
+                        niftyChange = niftyChange,
+                        niftyIsPositive = niftyIsPositive,
+                        sensexPrice = sensexPrice,
+                        sensexChange = sensexChange,
+                        sensexIsPositive = sensexIsPositive,
+                        giftNiftyPrice = giftNiftyPrice,
+                        giftNiftyChange = giftNiftyChange,
+                        giftNiftyIsPositive = giftNiftyIsPositive
+                    )
+                }
+            },
+            bottomBar = {
+                Column(
+                    modifier = Modifier
+                        .background(Color(0xFF0F172A))
+                        .navigationBarsPadding()
+                ) {
+                    AdBannerView()
+                }
             }
-        },
-        bottomBar = {
-            Column(modifier = Modifier.navigationBarsPadding()) {
-                AppBottomNavigation(currentScreen) { currentScreen = it }
-                AdBannerView()
+        ) { innerPadding ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 24.dp),
+                color = Color(0xFFF1F5F9)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Handle Bar pill at top of rounded light grey container
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .width(36.dp)
+                                .height(4.dp),
+                            shape = CircleShape,
+                            color = Color(0xFFCBD5E1)
+                        ) {}
+                    }
+
+                    // Top Navigation bar inside the rounded sheet
+                    AppTopNavigation(currentScreen) { currentScreen = it }
+
+                    // Active screen content
+                    Box(modifier = Modifier.weight(1f)) {
+                        when (currentScreen) {
+                            Screen.HOME -> DashboardScreen(onSymbolSelected = { symbol -> 
+                                selectedSymbol = symbol
+                                currentScreen = Screen.LIVE
+                            })
+                            Screen.LIVE, Screen.PREMIUM -> LiveScreen(initialSymbol = selectedSymbol)
+                            Screen.DIVIDENDS -> DividendsScreen(onSymbolSelected = { symbol ->
+                                selectedSymbol = symbol
+                                currentScreen = Screen.LIVE
+                            })
+                            Screen.WATCHLIST -> WatchlistScreen(onSymbolSelected = { symbol ->
+                                selectedSymbol = symbol
+                                currentScreen = Screen.LIVE
+                            })
+                            Screen.NEWS -> NewsScreen()
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
             }
-        }
-    ) { innerPadding ->
-        when (currentScreen) {
-            Screen.HOME -> DashboardScreen(modifier = Modifier.padding(innerPadding), onSymbolSelected = { symbol -> 
-                selectedSymbol = symbol
-                currentScreen = Screen.LIVE
-            })
-            Screen.LIVE -> LiveScreen(modifier = Modifier.padding(innerPadding), initialSymbol = selectedSymbol)
-            Screen.DIVIDENDS -> DividendsScreen(modifier = Modifier.padding(innerPadding), onSymbolSelected = { symbol ->
-                selectedSymbol = symbol
-                currentScreen = Screen.LIVE
-            })
-            Screen.WATCHLIST -> WatchlistScreen(modifier = Modifier.padding(innerPadding), onSymbolSelected = { symbol ->
-                selectedSymbol = symbol
-                currentScreen = Screen.LIVE
-            })
-            Screen.MARKET -> MarketScreen(modifier = Modifier.padding(innerPadding))
-            Screen.NEWS -> NewsScreen(modifier = Modifier.padding(innerPadding))
         }
     }
 }
@@ -756,11 +931,10 @@ class MainActivity : ComponentActivity() {
             loadAndShowAppOpenAd(this)
         }
         setContent {
-            val isSystemDark = isSystemInDarkTheme()
-            val isDarkTheme = remember { mutableStateOf(isSystemDark) }
+            val isDarkTheme = remember { mutableStateOf(false) }
             
             CompositionLocalProvider(LocalThemeMode provides isDarkTheme) {
-                MyApplicationTheme(darkTheme = isDarkTheme.value) {
+                MyApplicationTheme(darkTheme = false) {
                     MainApp()
                 }
             }
@@ -786,13 +960,342 @@ suspend fun fetchRealTimeData(ticker: String): String {
 }
 
 @Composable
+fun StockBreakoutCard(
+    res: ScanResult,
+    onSymbolSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    featured: Boolean = false
+) {
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val displaySymbol = res.ticker.replace(".NS", "").replace(".BO", "")
+    val changePct = res.changePercent ?: 0.0
+
+    val targetVal = res.target1 ?: (res.price * 1.08)
+    val formattedTarget = String.format(Locale.US, "%.2f", targetVal)
+
+    val stopLossVal = res.stopLoss ?: (res.price * 0.95)
+    val stopLossPct = if (res.price > 0) ((res.price - stopLossVal) / res.price) * 100 else 5.0
+    val formattedStopLossPct = String.format(Locale.US, "%.1f", stopLossPct)
+    val formattedPrice = "₹" + String.format(Locale.US, "%.2f", res.price)
+
+    val morningOpen = res.openPrice ?: res.previousClose ?: res.price
+    val isBelowMorningOpen = res.price < morningOpen
+    val cmpColor = if (isBelowMorningOpen) Color(0xFFEF4444) else Color(0xFF10B981)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onSymbolSelected(res.ticker) },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Row 1: Strong Breakout Badge Tag + Heart Icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StrongBreakoutGreen)
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = res.signalStrength.ifBlank { "STRONG BREAKOUT" }.uppercase(),
+                        color = Color.White,
+                        fontSize = 7.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.2.sp,
+                        maxLines = 1
+                    )
+                }
+
+                IconButton(
+                    onClick = { isFavorite = !isFavorite },
+                    modifier = Modifier.size(16.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Bookmark",
+                        tint = if (isFavorite) StopLossRedText else TextMutedGray,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            // Row 2: Company Icon + Ticker Symbol + Trend Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    CompanyLogoView(symbol = res.ticker, modifier = Modifier.size(18.dp))
+
+                    Text(
+                        text = displaySymbol,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TextPrimaryDark,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(TextGreenBadge)
+                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                    ) {
+                        val sign = if (changePct > 0) "↑" else if (changePct < 0) "↓" else "+"
+                        Text(
+                            text = if (changePct != 0.0) "$sign${kotlin.math.abs(changePct).toInt()}%" else "+0%",
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TrendTextGreen
+                        )
+                    }
+                }
+            }
+
+            // Row 3: Target Box (left) + Current Price in Red (right)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color(0xFFF8F9FA))
+                        .padding(horizontal = 4.dp, vertical = 1.5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Target ",
+                            color = TextMutedGray,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                        Text(
+                            text = formattedTarget,
+                            color = TextPrimaryDark,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Text(
+                    text = formattedPrice,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = cmpColor,
+                    maxLines = 1
+                )
+            }
+
+            // Row 4: Stop Loss Red Pill Band
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFFFFF0F1))
+                    .padding(vertical = 3.5.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "STOP-LOSS (-$formattedStopLossPct%)",
+                    fontSize = 8.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFDC2626),
+                    textAlign = TextAlign.Center,
+                    letterSpacing = 0.2.sp,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DashboardCard(
+    asset: BreakoutAsset,
+    onClick: () -> Unit
+) {
+    var isFavorite by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Row 1: Strong Breakout Badge Tag + Heart Icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StrongBreakoutGreen)
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "STRONG BREAKOUT",
+                        color = Color.White,
+                        fontSize = 7.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.2.sp,
+                        maxLines = 1
+                    )
+                }
+
+                IconButton(
+                    onClick = { isFavorite = !isFavorite },
+                    modifier = Modifier.size(16.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Bookmark",
+                        tint = if (isFavorite) StopLossRedText else TextMutedGray,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            // Row 2: Company Icon + Asset Title + Green Trend Metric Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    CompanyLogoView(symbol = asset.name, modifier = Modifier.size(18.dp))
+
+                    Text(
+                        text = asset.name,
+                        color = TextPrimaryDark,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 11.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(TextGreenBadge)
+                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = asset.trendPercentage,
+                            color = TrendTextGreen,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Row 3: Target Box & Current Price
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color(0xFFF8F9FA))
+                        .padding(horizontal = 4.dp, vertical = 1.5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Target ",
+                            color = TextMutedGray,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                        Text(
+                            text = asset.targetValue,
+                            color = TextPrimaryDark,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Text(
+                    text = "₹${asset.currentPrice}",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PriceNumericRed,
+                    maxLines = 1
+                )
+            }
+
+            // Row 4: Stop-Loss Band
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(StopLossRedBg)
+                    .padding(vertical = 3.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "STOP-LOSS (${asset.stopLossPercentage})",
+                    fontSize = 8.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StopLossRedText,
+                    textAlign = TextAlign.Center,
+                    letterSpacing = 0.2.sp,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) -> Unit = {}) {
+    val coroutineScope = rememberCoroutineScope()
     var scanResults by remember { mutableStateOf<List<ScanResult>>(emptyList()) }
     var isScanning by remember { mutableStateOf(true) }
     var loadingPercent by remember { mutableIntStateOf(0) }
     var lastFetchedTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while (isActive) {
@@ -829,20 +1332,23 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
     LaunchedEffect(scanResults.size) {
         if (scanResults.isEmpty()) return@LaunchedEffect
         while (isActive) {
-            delay(60000) // update every 60 seconds to avoid Yahoo rate limit
+            delay(60000)
             try {
                 val updatedList = withContext(Dispatchers.IO) {
                     scanResults.map { item ->
                         async {
                             try {
                                 val res = YahooRetrofit.service.getChart(item.ticker, "1d", "1m")
-                                val meta = res.chart?.result?.firstOrNull()?.meta
+                                val chartResult = res.chart?.result?.firstOrNull()
+                                val meta = chartResult?.meta
                                 val livePrice = meta?.regularMarketPrice ?: item.price
+                                val dayOpen = meta?.regularMarketDayOpen ?: chartResult?.indicators?.quote?.firstOrNull()?.open?.filterNotNull()?.firstOrNull() ?: item.openPrice
                                 val prevClose = meta?.previousClose ?: item.previousClose ?: livePrice
                                 val change = livePrice - prevClose
                                 val changePercent = if (prevClose > 0) (change / prevClose) * 100 else 0.0
                                 item.copy(
                                     price = livePrice,
+                                    openPrice = dayOpen,
                                     change = change,
                                     changePercent = changePercent
                                 )
@@ -861,659 +1367,103 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Color(0xFFF1F3F6))
     ) {
-        // Main Content
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Header for Breakout Stocks
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        if (isScanning && scanResults.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(40.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    AnimatedHeaderIcon(
-                        icon = Icons.Default.TrendingUp,
-                        backgroundColor = Color(0xFF10B981),
-                        shape = RoundedCornerShape(12.dp),
-                        useSurface = true
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        AnimatedHeadingText(
-                            text = "Today's Top 15 Breakout Stocks",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(
+                            progress = { loadingPercent / 100f },
+                            color = TabActiveBlue,
+                            modifier = Modifier.size(56.dp),
+                            strokeWidth = 5.dp
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val isOpen = MarketUtils.isMarketOpen()
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isOpen) Color(0xFF10B981) else Color.Gray)
-                            )
-                            Text(
-                                text = "Ranked by Technical Score & Momentum",
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        val timeFormatter = remember { java.text.SimpleDateFormat("hh:mm:ss a", java.util.Locale.getDefault()) }
-                        val formattedTime = timeFormatter.format(java.util.Date(lastFetchedTime))
-                        val isOlderThan15Mins = (currentTime - lastFetchedTime) > 15 * 60 * 1000L
-
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Last updated: $formattedTime",
-                                fontSize = 9.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (isOlderThan15Mins) {
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = Color(0xFFEF4444).copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = "⚠️ Data > 15m old",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFEF4444),
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = "$loadingPercent%",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TabActiveBlue
+                        )
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Scanning NIFTY 200 for breakout signals...", fontSize = 11.sp, color = TextMutedGray)
+                }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 8.dp, top = 8.dp, end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Top Breakouts",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A),
+                            letterSpacing = (-0.3).sp
+                        )
 
-                    IconButton(
-                        onClick = {
-                            if (!isScanning) {
-                                isScanning = true
+                        IconButton(
+                            onClick = {
                                 coroutineScope.launch {
                                     try {
-                                        scanResults = StockScanner.scanMultiple("Breakouts")
+                                        isScanning = true
+                                        scanResults = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
                                         lastFetchedTime = System.currentTimeMillis()
+                                    } catch (e: Exception) {
                                     } finally {
                                         isScanning = false
                                     }
                                 }
-                            }
-                        },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        if (isScanning) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Scan Breakouts",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (isScanning) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                )
-            }
-
-            if (isScanning && scanResults.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                progress = { loadingPercent / 100f },
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(64.dp),
-                                strokeWidth = 6.dp
-                            )
-                            Text(
-                                text = "$loadingPercent%",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Scanning NIFTY 200 for breakout signals...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            } else if (scanResults.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column {
-                        RecommendationTableHeader()
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                        scanResults.forEachIndexed { index, res ->
-                            RecommendationTableRow(res, index, onSymbolSelected)
-                            if (index < scanResults.lastIndex) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Native Ad Unit
-                NativeAdViewComposable()
-
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // SEBI Educational Disclaimer
-                Text(
-                    text = "Disclaimer: All stock analysis, scan results, and price levels provided in this application are strictly for educational and informational purposes only. The app/developer is not a SEBI registered investment advisor or research analyst. Please consult a qualified financial advisor before making any investment or trading decisions.",
-                    fontSize = 10.sp,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = 14.sp,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
-
-@Composable
-fun GitHubSyncDialog(onDismiss: () -> Unit) {
-    var isSyncingGitHub by remember { mutableStateOf(false) }
-    var gitSyncMessage by remember { mutableStateOf<String?>(null) }
-    var gitCommitHash by remember { mutableStateOf("main@8a4f2e9") }
-    val coroutineScope = rememberCoroutineScope()
-
-    AlertDialog(
-        onDismissRequest = { if (!isSyncingGitHub) onDismiss() },
-        icon = {
-            Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.CloudDownload,
-                contentDescription = "GitHub Auto-Sync",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-        },
-        title = {
-            Text(
-                "GitHub Sync & Auto-Update",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        Text("Repository: github.com/aistudio/investify-app", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Branch: main", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Current Build: $gitCommitHash", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (isSyncingGitHub) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    ) {
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Pulling latest commit from origin/main...",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else if (gitSyncMessage != null) {
-                    Surface(
-                        color = Color(0xFF10B981).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            },
+                            modifier = Modifier.size(32.dp)
                         ) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                gitSyncMessage!!,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF10B981)
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        "Pull the latest codebase updates directly from your linked GitHub repository. App will sync market indicators and scanner rules.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = !isSyncingGitHub,
-                onClick = {
-                    isSyncingGitHub = true
-                    gitSyncMessage = null
-                    coroutineScope.launch {
-                        delay(1800)
-                        gitCommitHash = "main@9c2e" + (100..999).random()
-                        gitSyncMessage = "Successfully pulled latest changes! App updated to $gitCommitHash."
-                        isSyncingGitHub = false
-                    }
-                }
-            ) {
-                if (isSyncingGitHub) {
-                    Text("Syncing...")
-                } else {
-                    Text("Pull & Update App")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(
-                enabled = !isSyncingGitHub,
-                onClick = onDismiss
-            ) {
-                Text("Close")
-            }
-        }
-    )
-}
-}
-
-@Composable
-fun BadgeBox(badgeText: String, content: @Composable () -> Unit) {
-    Box {
-        content()
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 4.dp, y = (-2).dp),
-            shape = RoundedCornerShape(4.dp),
-            color = Color(0xFF10B981)
-        ) {
-            Text(
-                text = badgeText,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun GitHubUpdateDialog(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    var repoUrl by remember { mutableStateOf("https://github.com/investify/investify-android") }
-    var branchName by remember { mutableStateOf("main") }
-    var isPulling by remember { mutableStateOf(false) }
-    var pullLogs by remember { mutableStateOf<List<String>>(emptyList()) }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
-    var autoSyncEnabled by remember { mutableStateOf(true) }
-
-    AlertDialog(
-        onDismissRequest = { if (!isPulling) onDismiss() },
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CloudDownload,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(26.dp)
-                )
-                Column {
-                    Text(
-                        text = "Git Update & Sync",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        text = "Pull latest code changes via Internet",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Repository URL
-                OutlinedTextField(
-                    value = repoUrl,
-                    onValueChange = { repoUrl = it },
-                    label = { Text("GitHub Repository URL", fontSize = 12.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = branchName,
-                        onValueChange = { branchName = it },
-                        label = { Text("Git Branch", fontSize = 12.sp) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
-                    )
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF10B981).copy(alpha = 0.15f),
-                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f)),
-                        modifier = Modifier.padding(top = 6.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF10B981))
-                            )
-                            Text("Online", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
-                        }
-                    }
-                }
-
-                // Action Buttons Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            if (!isPulling) {
-                                isPulling = true
-                                statusMessage = null
-                                pullLogs = listOf("Connecting to $repoUrl...", "Checking remote branch '$branchName'...")
-                                coroutineScope.launch {
-                                    delay(600)
-                                    pullLogs = pullLogs + "Fetching origin/$branchName over HTTPS..."
-                                    delay(700)
-                                    pullLogs = pullLogs + "From $repoUrl\n * branch $branchName -> FETCH_HEAD"
-                                    delay(600)
-                                    pullLogs = pullLogs + "Updating commit #c0f2a9d..#e4d023a"
-                                    pullLogs = pullLogs + "Fast-forwarding codebase and syncing dependencies..."
-                                    delay(800)
-                                    pullLogs = pullLogs + "SUCCESS: Pulled latest code changes!"
-                                    pullLogs = pullLogs + "App state and live endpoints updated."
-                                    isPulling = false
-                                    statusMessage = "App updated to latest Git commit #e4d023a!"
-                                }
-                            }
-                        },
-                        enabled = !isPulling,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(vertical = 10.dp)
-                    ) {
-                        if (isPulling) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Pulling...", fontSize = 12.sp)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Pull Latest Code", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {}
-                        },
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.OpenInNew,
-                            contentDescription = "Open Repo",
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-
-                // Console Output Terminal
-                if (pullLogs.isNotEmpty()) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF0F172A),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text(
-                                text = "Git Pull Log:",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF38BDF8)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            pullLogs.forEach { logLine ->
-                                Text(
-                                    text = "$ $logLine",
-                                    fontSize = 10.sp,
-                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                    color = if (logLine.contains("SUCCESS")) Color(0xFF34D399) else Color(0xFFE2E8F0)
+                            if (isScanning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Breakout Signals",
+                                    tint = Color(0xFF64748B),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
                 }
 
-                if (statusMessage != null) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF10B981).copy(alpha = 0.18f),
-                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF059669),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = statusMessage ?: "",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF059669)
-                            )
-                        }
-                    }
-                }
-
-                // Auto Sync Switch
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto-Check Remote Updates", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("Automatically pull updates from GitHub", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = autoSyncEnabled,
-                        onCheckedChange = { autoSyncEnabled = it }
+                items(scanResults, key = { it.ticker }) { res ->
+                    StockBreakoutCard(
+                        res = res,
+                        onSymbolSelected = onSymbolSelected
                     )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss, enabled = !isPulling) {
-                Text("Close")
-            }
-        }
-    )
-}
-
-@Composable
-fun AppBottomNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) {
-    val context = LocalContext.current
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
-        tonalElevation = 8.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val items = listOf(
-                Triple(Screen.HOME, Icons.Default.Home, "Home"),
-                Triple(Screen.LIVE, Icons.Default.Analytics, "Analysis"),
-                Triple(Screen.DIVIDENDS, Icons.Default.Payments, "Dividends"),
-                Triple(Screen.WATCHLIST, Icons.Default.Favorite, "Watchlist"),
-                Triple(Screen.MARKET, Icons.Default.OndemandVideo, "Market"),
-                Triple(Screen.NEWS, Icons.AutoMirrored.Filled.Article, "News")
-            )
-
-            for ((screen, icon, label) in items) {
-                val isSelected = currentScreen == screen
-                val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-
-                Surface(
-                    onClick = { 
-                        if (currentScreen != screen) {
-                            InterstitialAdManager.showAd(context) {
-                                onScreenSelected(screen)
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    color = backgroundColor,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(vertical = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = contentColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = label,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = contentColor,
-                            maxLines = 1
-                        )
-                    }
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun RecommendationsScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) -> Unit = {}) {
@@ -1550,7 +1500,7 @@ fun RecommendationsScreen(modifier: Modifier = Modifier, onSymbolSelected: (Stri
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(modifier = modifier.fillMaxSize().background(Color(0xFFF5F7FA))) {
         Text("Algorithmic Tech-Tips", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(16.dp))
         
         if (isLoading) {
@@ -1562,23 +1512,25 @@ fun RecommendationsScreen(modifier: Modifier = Modifier, onSymbolSelected: (Stri
                 }
             }
         } else {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.weight(1f).padding(horizontal = 16.dp).padding(bottom = 16.dp).fillMaxWidth()
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Header
-                    RecommendationTableHeader()
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        itemsIndexed(results) { index, res ->
-                            RecommendationTableRow(res, index, onSymbolSelected)
-                            if (index < results.lastIndex) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                items(results.chunked(2)) { pair ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        for (res in pair) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                StockBreakoutCard(res = res, onSymbolSelected = onSymbolSelected)
                             }
+                        }
+                        if (pair.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -1587,144 +1539,9 @@ fun RecommendationsScreen(modifier: Modifier = Modifier, onSymbolSelected: (Stri
     }
 }
 
-@Composable
-fun RecommendationTableHeader() {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Stock / Signal",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(0.32f)
-            )
-            Text(
-                "CMP (₹)",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(0.17f),
-                textAlign = TextAlign.End
-            )
-            Text(
-                "Target 1",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(0.17f),
-                textAlign = TextAlign.End
-            )
-            Text(
-                "Target 2",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(0.17f),
-                textAlign = TextAlign.End
-            )
-            Text(
-                "Stop Loss",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(0.17f),
-                textAlign = TextAlign.End
-            )
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RecommendationTableRow(res: ScanResult, index: Int, onSymbolSelected: (String) -> Unit = {}) {
-    val bgColor = if (index % 2 == 0) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-    }
 
-    val signalColor = when(res.signalStrength) {
-        "STRONG BUY", "BUY", "STRONG BREAKOUT" -> Color(0xFF10B981)
-        "SELL", "WEAK/SELL" -> Color(0xFFEF4444)
-        else -> Color(0xFFF59E0B)
-    }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable { onSymbolSelected(res.ticker) }
-            .padding(vertical = 10.dp, horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val symbolToDisplay = res.ticker.replace(".NS", "")
-        
-        Column(modifier = Modifier.weight(0.32f)) {
-            Text(
-                symbolToDisplay,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-            Surface(
-                shape = RoundedCornerShape(4.dp),
-                color = signalColor.copy(alpha = 0.15f),
-                modifier = Modifier.padding(top = 2.dp)
-            ) {
-                Text(
-                    text = res.signalStrength,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = signalColor,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                )
-            }
-        }
-        
-        Text(
-            text = "₹${Math.round(res.price)}",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(0.17f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            text = res.target1?.let { "₹${Math.round(it)}" } ?: "-",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF10B981),
-            modifier = Modifier.weight(0.17f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            text = res.target2?.let { "₹${Math.round(it)}" } ?: "-",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF10B981),
-            modifier = Modifier.weight(0.17f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            text = res.stopLoss?.let { "₹${Math.round(it)}" } ?: "-",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFFEF4444),
-            modifier = Modifier.weight(0.17f),
-            textAlign = TextAlign.End
-        )
-    }
-}
 
 @Composable
 fun PortfolioScreen(modifier: Modifier = Modifier) {

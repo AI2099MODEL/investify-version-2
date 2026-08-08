@@ -1,6 +1,9 @@
 package com.example
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -17,7 +20,8 @@ data class NewsArticle(
     val timeAgo: String = "Just now",
     val category: String = "General",
     val sentiment: String = "NEUTRAL", // BULLISH, BEARISH, NEUTRAL
-    val url: String = ""
+    val url: String = "",
+    val imageUrl: String = ""
 )
 
 object NewsTickerService {
@@ -37,6 +41,41 @@ object NewsTickerService {
         "US Fed hints at potential rate cut, driving global equity markets higher"
     )
 
+    fun getCategoryImage(category: String, title: String): String {
+        val lower = (category + " " + title).lowercase(Locale.ROOT)
+        return when {
+            // Auto / EV
+            lower.contains("auto") || lower.contains("ev") || lower.contains("motor") || lower.contains("maruti") || lower.contains("mahindra") || lower.contains("tata motor") ->
+                "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&q=80"
+            // Green Energy / Oil / Power / Capex
+            lower.contains("energy") || lower.contains("green") || lower.contains("power") || lower.contains("oil") || lower.contains("solar") || lower.contains("reliance") ->
+                "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=400&q=80"
+            // Banking / Financial / RBI / Vault / HDFC / ICICI / SBI
+            lower.contains("bank") || lower.contains("rbi") || lower.contains("fii") || lower.contains("dii") || lower.contains("hdfc") || lower.contains("icici") || lower.contains("sbi") || lower.contains("repo") ->
+                "https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&q=80"
+            // Tech / IT / AI / Cloud / TCS / Infosys / Wipro
+            lower.contains("tech") || lower.contains("tcs") || lower.contains("infosys") || lower.contains("wipro") || lower.contains("cloud") || lower.contains("ai ") ->
+                "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80"
+            // Global / Fed / US / Wall Street
+            lower.contains("global") || lower.contains("fed") || lower.contains("us ") || lower.contains("wall street") ->
+                "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400&q=80"
+            // IPO / Earnings / Dividend / Result / Allotment
+            lower.contains("ipo") || lower.contains("dividend") || lower.contains("earning") || lower.contains("q1") || lower.contains("q2") || lower.contains("q3") || lower.contains("q4") ->
+                "https://images.unsplash.com/photo-1535320903710-d993d3d77d29?w=400&q=80"
+            // Metals / Steel / Mining / Vedanta
+            lower.contains("metal") || lower.contains("steel") || lower.contains("vedanta") || lower.contains("coal") ->
+                "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80"
+            // Pharma / Healthcare / Lab
+            lower.contains("pharma") || lower.contains("cipla") || lower.contains("health") || lower.contains("drug") ->
+                "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400&q=80"
+            // Real Estate / Infrastructure / Skyline
+            lower.contains("realty") || lower.contains("infra") || lower.contains("dlf") || lower.contains("cement") ->
+                "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80"
+            // Nifty / Sensex / Market Bull
+            else -> "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400&q=80"
+        }
+    }
+
     val SAMPLE_ARTICLES = listOf(
         NewsArticle(
             id = "1",
@@ -45,7 +84,8 @@ object NewsTickerService {
             timeAgo = "15 mins ago",
             category = "Nifty & Sensex",
             sentiment = "BULLISH",
-            url = "https://economictimes.indiatimes.com/markets"
+            url = "https://economictimes.indiatimes.com/markets",
+            imageUrl = "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400&q=80"
         ),
         NewsArticle(
             id = "2",
@@ -54,7 +94,8 @@ object NewsTickerService {
             timeAgo = "32 mins ago",
             category = "FII / DII",
             sentiment = "BULLISH",
-            url = "https://www.moneycontrol.com/news/business/markets"
+            url = "https://www.moneycontrol.com/news/business/markets",
+            imageUrl = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&q=80"
         ),
         NewsArticle(
             id = "3",
@@ -63,7 +104,8 @@ object NewsTickerService {
             timeAgo = "1 hour ago",
             category = "Nifty & Sensex",
             sentiment = "NEUTRAL",
-            url = "https://www.cnbctv18.com"
+            url = "https://www.cnbctv18.com",
+            imageUrl = "https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&q=80"
         ),
         NewsArticle(
             id = "4",
@@ -72,7 +114,8 @@ object NewsTickerService {
             timeAgo = "2 hours ago",
             category = "Corporate & Q3",
             sentiment = "BULLISH",
-            url = "https://www.livemint.com/market"
+            url = "https://www.livemint.com/market",
+            imageUrl = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80"
         ),
         NewsArticle(
             id = "5",
@@ -81,7 +124,8 @@ object NewsTickerService {
             timeAgo = "3 hours ago",
             category = "Corporate & Q3",
             sentiment = "BULLISH",
-            url = "https://www.business-standard.com"
+            url = "https://www.business-standard.com",
+            imageUrl = "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=400&q=80"
         ),
         NewsArticle(
             id = "6",
@@ -90,7 +134,8 @@ object NewsTickerService {
             timeAgo = "4 hours ago",
             category = "Global Markets",
             sentiment = "BULLISH",
-            url = "https://www.reuters.com/markets"
+            url = "https://www.reuters.com/markets",
+            imageUrl = "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400&q=80"
         ),
         NewsArticle(
             id = "7",
@@ -99,7 +144,8 @@ object NewsTickerService {
             timeAgo = "5 hours ago",
             category = "Global Markets",
             sentiment = "NEUTRAL",
-            url = "https://www.bloomberg.com"
+            url = "https://www.bloomberg.com",
+            imageUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=80"
         ),
         NewsArticle(
             id = "8",
@@ -108,7 +154,8 @@ object NewsTickerService {
             timeAgo = "6 hours ago",
             category = "Corporate & Q3",
             sentiment = "BULLISH",
-            url = "https://www.financialexpress.com"
+            url = "https://www.financialexpress.com",
+            imageUrl = "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&q=80"
         ),
         NewsArticle(
             id = "9",
@@ -117,7 +164,8 @@ object NewsTickerService {
             timeAgo = "7 hours ago",
             category = "IPO & Earnings",
             sentiment = "NEUTRAL",
-            url = "https://www.zeebiz.com"
+            url = "https://www.zeebiz.com",
+            imageUrl = "https://images.unsplash.com/photo-1535320903710-d993d3d77d29?w=400&q=80"
         ),
         NewsArticle(
             id = "10",
@@ -126,7 +174,8 @@ object NewsTickerService {
             timeAgo = "8 hours ago",
             category = "Corporate & Q3",
             sentiment = "BULLISH",
-            url = "https://www.ndtvprofit.com"
+            url = "https://www.ndtvprofit.com",
+            imageUrl = "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80"
         )
     )
 
@@ -183,63 +232,149 @@ object NewsTickerService {
         }
     }
 
-    private fun parseRSSXml(xml: String, fallbackCategory: String): List<NewsArticle> {
-        val articles = mutableListOf<NewsArticle>()
-        val itemRegex = "<item>(.*?)</item>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
-        val matches = itemRegex.findAll(xml)
+    private fun fetchRealImageUrlFromPage(url: String): String? {
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.5")
+                .build()
 
-        for ((index, match) in matches.withIndex()) {
-            val itemXml = match.groupValues[1]
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return null
 
-            val rawTitle = extractTagContent(itemXml, "title") ?: continue
-            val link = extractTagContent(itemXml, "link") ?: ""
-            val pubDate = extractTagContent(itemXml, "pubDate") ?: ""
-            val sourceFromTag = extractTagContent(itemXml, "source")
+            val html = response.body?.string() ?: return null
 
-            if (rawTitle.isBlank() || rawTitle.equals("Google News", ignoreCase = true)) continue
-
-            // Unescape HTML entities & clean CDATA
-            val cleanTitle = cleanHtmlEntities(rawTitle)
-
-            // Split title and source correctly (source is after the LAST ' - ')
-            val lastDashIndex = cleanTitle.lastIndexOf(" - ")
-            val headline: String
-            val source: String
-
-            if (lastDashIndex != -1) {
-                headline = cleanTitle.substring(0, lastDashIndex).trim()
-                val parsedSource = cleanTitle.substring(lastDashIndex + 3).trim()
-                source = if (parsedSource.isNotBlank()) parsedSource else (sourceFromTag ?: "Market News")
-            } else {
-                headline = cleanTitle
-                source = sourceFromTag ?: "Economic Times"
+            // Find meta tag containing property="og:image" or name="twitter:image" or name="thumbnail"
+            val ogImageRegex = """<meta\s+[^>]*property=["']og:image["']\s+[^>]*content=["']([^"']+)["']""".toRegex(RegexOption.IGNORE_CASE)
+            val ogImageMatch = ogImageRegex.find(html)
+            if (ogImageMatch != null) {
+                val candidate = ogImageMatch.groupValues[1].replace("&amp;", "&")
+                if (candidate.startsWith("http")) return candidate
             }
 
-            if (headline.isBlank() || headline.equals("Google News", ignoreCase = true)) continue
+            val ogImageRegexAlt = """<meta\s+[^>]*content=["']([^"']+)["']\s+[^>]*property=["']og:image["']""".toRegex(RegexOption.IGNORE_CASE)
+            val ogImageMatchAlt = ogImageRegexAlt.find(html)
+            if (ogImageMatchAlt != null) {
+                val candidate = ogImageMatchAlt.groupValues[1].replace("&amp;", "&")
+                if (candidate.startsWith("http")) return candidate
+            }
 
-            val (timeAgo, isTooOld) = calculateTimeAgoWithAgeCheck(pubDate, index)
-            // Strictly exclude any news older than 2 days (48 hours)
-            if (isTooOld) continue
+            val twitterImageRegex = """<meta\s+[^>]*name=["']twitter:image["']\s+[^>]*content=["']([^"']+)["']""".toRegex(RegexOption.IGNORE_CASE)
+            val twitterImageMatch = twitterImageRegex.find(html)
+            if (twitterImageMatch != null) {
+                val candidate = twitterImageMatch.groupValues[1].replace("&amp;", "&")
+                if (candidate.startsWith("http")) return candidate
+            }
 
-            val sentiment = determineSentiment(headline)
-            val articleCat = determineCategory(headline, fallbackCategory)
+            val thumbRegex = """<meta\s+[^>]*name=["']thumbnail["']\s+[^>]*content=["']([^"']+)["']""".toRegex(RegexOption.IGNORE_CASE)
+            val thumbMatch = thumbRegex.find(html)
+            if (thumbMatch != null) {
+                val candidate = thumbMatch.groupValues[1].replace("&amp;", "&")
+                if (candidate.startsWith("http")) return candidate
+            }
+        } catch (e: Exception) {
+            // Silently fall back
+        }
+        return null
+    }
 
-            articles.add(
-                NewsArticle(
-                    id = "rss_$index",
-                    title = headline,
-                    source = source,
-                    timeAgo = timeAgo,
-                    category = articleCat,
-                    sentiment = sentiment,
-                    url = link.trim()
-                )
-            )
+    private suspend fun parseRSSXml(xml: String, fallbackCategory: String): List<NewsArticle> = coroutineScope {
+        val itemRegex = "<item>(.*?)</item>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+        val matches = itemRegex.findAll(xml).take(15).toList()
 
-            if (articles.size >= 15) break
+        val deferredArticles = matches.mapIndexed { index, match ->
+            async(Dispatchers.IO) {
+                try {
+                    val itemXml = match.groupValues[1]
+
+                    val rawTitle = extractTagContent(itemXml, "title") ?: return@async null
+                    val link = extractTagContent(itemXml, "link") ?: ""
+                    val pubDate = extractTagContent(itemXml, "pubDate") ?: ""
+                    val sourceFromTag = extractTagContent(itemXml, "source")
+
+                    if (rawTitle.isBlank() || rawTitle.equals("Google News", ignoreCase = true)) return@async null
+
+                    // Unescape HTML entities & clean CDATA
+                    val cleanTitle = cleanHtmlEntities(rawTitle)
+
+                    // Split title and source correctly (source is after the LAST ' - ')
+                    val lastDashIndex = cleanTitle.lastIndexOf(" - ")
+                    val headline: String
+                    val source: String
+
+                    if (lastDashIndex != -1) {
+                        headline = cleanTitle.substring(0, lastDashIndex).trim()
+                        val parsedSource = cleanTitle.substring(lastDashIndex + 3).trim()
+                        source = if (parsedSource.isNotBlank()) parsedSource else (sourceFromTag ?: "Market News")
+                    } else {
+                        headline = cleanTitle
+                        source = sourceFromTag ?: "Economic Times"
+                    }
+
+                    if (headline.isBlank() || headline.equals("Google News", ignoreCase = true)) return@async null
+
+                    val (timeAgo, isTooOld) = calculateTimeAgoWithAgeCheck(pubDate, index)
+                    // Strictly exclude any news older than 2 days (48 hours)
+                    if (isTooOld) return@async null
+
+                    val sentiment = determineSentiment(headline)
+                    val articleCat = determineCategory(headline, fallbackCategory)
+
+                    // Extract image URL from item XML if present
+                    var extractedImg = ""
+                    val unescapedXml = cleanHtmlEntities(itemXml)
+
+                    val mediaRegex = "(?:media:content|media:thumbnail|enclosure)[^>]+url=[\"'](https?://[^\"']+)[\"']".toRegex(RegexOption.IGNORE_CASE)
+                    val mediaMatch = mediaRegex.find(itemXml) ?: mediaRegex.find(unescapedXml)
+                    if (mediaMatch != null) {
+                        val candidate = mediaMatch.groupValues[1].replace("&amp;", "&")
+                        if (candidate.startsWith("http")) {
+                            extractedImg = candidate
+                        }
+                    }
+
+                    if (extractedImg.isBlank()) {
+                        val imgRegex = "<img[^>]+src=[\"'](https?://[^\"']+)[\"']".toRegex(RegexOption.IGNORE_CASE)
+                        val imgMatch = imgRegex.find(itemXml) ?: imgRegex.find(unescapedXml)
+                        if (imgMatch != null) {
+                            val candidate = imgMatch.groupValues[1].replace("&amp;", "&")
+                            if (candidate.startsWith("http")) {
+                                extractedImg = candidate
+                            }
+                        }
+                    }
+
+                    // Try fetching from the actual page if we still don't have an image
+                    if (extractedImg.isBlank() && link.isNotBlank()) {
+                        val fetchedUrl = fetchRealImageUrlFromPage(link.trim())
+                        if (!fetchedUrl.isNullOrBlank()) {
+                            extractedImg = fetchedUrl
+                        }
+                    }
+
+                    if (extractedImg.isBlank()) {
+                        extractedImg = getCategoryImage(articleCat, headline)
+                    }
+
+                    NewsArticle(
+                        id = "rss_$index",
+                        title = headline,
+                        source = source,
+                        timeAgo = timeAgo,
+                        category = articleCat,
+                        sentiment = sentiment,
+                        url = link.trim(),
+                        imageUrl = extractedImg
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
         }
 
-        return articles
+        deferredArticles.awaitAll().filterNotNull()
     }
 
     private fun extractTagContent(xml: String, tagName: String): String? {
@@ -269,7 +404,8 @@ object NewsTickerService {
     }
 
     private fun calculateTimeAgoWithAgeCheck(pubDateStr: String, fallbackIndex: Int): Pair<String, Boolean> {
-        if (pubDateStr.isBlank()) return Pair("${(fallbackIndex + 1) * 15} mins ago", false)
+        val todayFormatted = SimpleDateFormat("MMM d, yyyy", Locale.US).format(Date())
+        if (pubDateStr.isBlank()) return Pair("${(fallbackIndex + 1) * 15} mins ago · $todayFormatted", false)
         return try {
             val sdf = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
             val date = sdf.parse(pubDateStr)
@@ -284,16 +420,17 @@ object NewsTickerService {
                 val timeStr = when {
                     diffMins <= 0 -> "Just now"
                     diffMins < 60 -> "$diffMins mins ago"
-                    diffHours < 24 -> "$diffHours hrs ago"
+                    diffHours < 24 -> "$diffHours hours ago"
                     diffHours < 48 -> "1 day ago"
                     else -> "${diffHours / 24} days ago"
                 }
-                Pair(timeStr, isTooOld)
+                val dateStr = SimpleDateFormat("MMM d, yyyy", Locale.US).format(date)
+                Pair("$timeStr · $dateStr", isTooOld)
             } else {
-                Pair("${(fallbackIndex + 1) * 15} mins ago", false)
+                Pair("${(fallbackIndex + 1) * 15} mins ago · $todayFormatted", false)
             }
         } catch (e: Exception) {
-            Pair("${(fallbackIndex + 1) * 15} mins ago", false)
+            Pair("${(fallbackIndex + 1) * 15} mins ago · $todayFormatted", false)
         }
     }
 
