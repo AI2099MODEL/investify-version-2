@@ -1377,6 +1377,44 @@ fun DashboardCard(
     }
 }
 
+// Helper extensions for database caching
+fun ScannedBreakout.toScanResult() = ScanResult(
+    ticker = ticker,
+    name = name,
+    price = price,
+    strategies = strategies,
+    score = score,
+    reasons = reasons,
+    signalStrength = signalStrength,
+    stopLoss = stopLoss,
+    target1 = target1,
+    target2 = target2,
+    historicalPrices = emptyList(),
+    previousClose = previousClose,
+    openPrice = openPrice,
+    change = change,
+    changePercent = changePercent,
+    isBtst = isBtst
+)
+
+fun ScanResult.toScannedBreakout() = ScannedBreakout(
+    ticker = ticker,
+    name = name,
+    price = price,
+    strategies = strategies,
+    score = score,
+    reasons = reasons,
+    signalStrength = signalStrength,
+    stopLoss = stopLoss,
+    target1 = target1,
+    target2 = target2,
+    previousClose = previousClose,
+    openPrice = openPrice,
+    change = change,
+    changePercent = changePercent,
+    isBtst = isBtst
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) -> Unit = {}) {
@@ -1407,12 +1445,27 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
         }
     }
 
-    // Initial Auto-scan for Top 15 Breakouts
+    // Initial Auto-scan for Top 15 Breakouts with Database Caching
     LaunchedEffect(Unit) {
         try {
             isScanning = true
-            scanResults = StockScanner.scanMultiple("Breakouts")
-            lastFetchedTime = System.currentTimeMillis()
+            val cached = withContext(Dispatchers.IO) {
+                MyApplication.database.scannedBreakoutDao().getAllScannedBreakoutsList()
+            }
+            if (cached.isNotEmpty()) {
+                scanResults = cached.map { it.toScanResult() }
+                isScanning = false
+            } else {
+                val fresh = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
+                scanResults = fresh
+                lastFetchedTime = System.currentTimeMillis()
+                withContext(Dispatchers.IO) {
+                    MyApplication.database.scannedBreakoutDao().clearAll()
+                    MyApplication.database.scannedBreakoutDao().insertBreakouts(fresh.map { it.toScannedBreakout() })
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         } finally {
             isScanning = false
         }
@@ -1516,8 +1569,13 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                                 coroutineScope.launch {
                                     try {
                                         isScanning = true
-                                        scanResults = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
+                                        val fresh = withContext(Dispatchers.IO) { StockScanner.scanMultiple("Breakouts") }
+                                        scanResults = fresh
                                         lastFetchedTime = System.currentTimeMillis()
+                                        withContext(Dispatchers.IO) {
+                                            MyApplication.database.scannedBreakoutDao().clearAll()
+                                            MyApplication.database.scannedBreakoutDao().insertBreakouts(fresh.map { it.toScannedBreakout() })
+                                        }
                                     } catch (e: Exception) {
                                     } finally {
                                         isScanning = false

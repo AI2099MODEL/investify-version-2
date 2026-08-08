@@ -25,6 +25,8 @@ class MyApplication : Application() {
         createNotificationChannel()
         WorkerUtils.schedulePriceAlertWorker(this)
         WorkerUtils.scheduleDividendWorker(this)
+        WorkerUtils.scheduleMarketScannerEngineWorker(this)
+        MarketEngine.startEngine(this)
     }
 
     private fun createNotificationChannel() {
