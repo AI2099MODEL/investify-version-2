@@ -318,8 +318,8 @@ fun GlobalTopBar(
     }
 }
 
-val TopNavLightBg = Color(0xFFFFD700)
-val NavActiveBlue = Color(0xFFE91E63)
+val TopNavLightBg = Color(0xFFF1F5F9)
+val NavActiveBlue = Color(0xFF7C3AED)
 
 @Composable
 fun AppTopNavigation(currentScreen: Screen, onScreenSelected: (Screen) -> Unit) {
