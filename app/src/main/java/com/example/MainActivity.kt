@@ -1543,7 +1543,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                 Surface(
                     onClick = { activeSubTab = "BREAKOUTS" },
                     modifier = Modifier.weight(1f),
-                    color = if (isBreakoutsSelected) TabActiveBlue else Color.Transparent,
+                    color = if (isBreakoutsSelected) Color(0xFFEDE9FE) else Color.Transparent,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Box(
@@ -1554,7 +1554,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                             Icon(
                                 imageVector = Icons.Default.TrendingUp,
                                 contentDescription = null,
-                                tint = if (isBreakoutsSelected) Color.White else Color(0xFF64748B),
+                                tint = if (isBreakoutsSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -1562,7 +1562,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                                 "Top Breakouts",
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isBreakoutsSelected) Color.White else Color(0xFF64748B)
+                                color = if (isBreakoutsSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
                             )
                         }
                     }
@@ -1573,7 +1573,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                 Surface(
                     onClick = { activeSubTab = "AUTOTRADER" },
                     modifier = Modifier.weight(1f),
-                    color = if (isAutoTraderSelected) TabActiveBlue else Color.Transparent,
+                    color = if (isAutoTraderSelected) Color(0xFFEDE9FE) else Color.Transparent,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Box(
@@ -1584,7 +1584,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                             Icon(
                                 imageVector = Icons.Default.AutoGraph,
                                 contentDescription = null,
-                                tint = if (isAutoTraderSelected) Color.White else Color(0xFF64748B),
+                                tint = if (isAutoTraderSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -1592,7 +1592,7 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                                 "Auto Trader",
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isAutoTraderSelected) Color.White else Color(0xFF64748B)
+                                color = if (isAutoTraderSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
                             )
                         }
                     }
@@ -1645,16 +1645,8 @@ fun DashboardScreen(modifier: Modifier = Modifier, onSymbolSelected: (String) ->
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.End
                         ) {
-                            Text(
-                                text = "Top Breakouts",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A),
-                                letterSpacing = (-0.3).sp
-                            )
-
                             IconButton(
                                 onClick = {
                                     coroutineScope.launch {

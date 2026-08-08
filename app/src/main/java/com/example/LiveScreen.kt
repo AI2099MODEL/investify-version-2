@@ -385,26 +385,14 @@ fun LiveScreen(modifier: Modifier = Modifier, initialSymbol: String? = null) {
             .background(MaterialTheme.colorScheme.background)
             .padding(14.dp)
     ) {
-        // Header
-        Text(
-            text = "AI Premium Analysis",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF0F172A),
-            letterSpacing = (-0.3).sp,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
         // Analysis Mode Switcher Tabs (Portfolio Level vs Single Stock)
-        Surface(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
         ) {
             Row(
                 modifier = Modifier
@@ -412,59 +400,63 @@ fun LiveScreen(modifier: Modifier = Modifier, initialSymbol: String? = null) {
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Portfolio analysis button
+                val isPortfolioSelected = activeAnalysisMode == 0
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (activeAnalysisMode == 0) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { activeAnalysisMode = 0 }
+                    onClick = { activeAnalysisMode = 0 },
+                    modifier = Modifier.weight(1f),
+                    color = if (isPortfolioSelected) Color(0xFFEDE9FE) else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PieChart,
-                            contentDescription = null,
-                            tint = if (activeAnalysisMode == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Portfolio Analysis",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (activeAnalysisMode == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.PieChart,
+                                contentDescription = null,
+                                tint = if (isPortfolioSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Portfolio Analysis",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isPortfolioSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
+                            )
+                        }
                     }
                 }
 
+                // Single Stock AI button
+                val isSingleStockSelected = activeAnalysisMode == 1
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (activeAnalysisMode == 1) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { activeAnalysisMode = 1 }
+                    onClick = { activeAnalysisMode = 1 },
+                    modifier = Modifier.weight(1f),
+                    color = if (isSingleStockSelected) Color(0xFFEDE9FE) else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ShowChart,
-                            contentDescription = null,
-                            tint = if (activeAnalysisMode == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Single Stock AI",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (activeAnalysisMode == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ShowChart,
+                                contentDescription = null,
+                                tint = if (isSingleStockSelected) Color(0xFF7C3AED) else Color(0xFF64748B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Single Stock AI",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSingleStockSelected) Color(0xFF7C3AED) else Color(0xFF64748B)
+                            )
+                        }
                     }
                 }
             }
